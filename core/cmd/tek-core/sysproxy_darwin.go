@@ -120,6 +120,11 @@ func setSystemProxy(p proxySettings) (*proxyState, error) {
 	}
 	if firstErr != nil {
 		restoreSystemProxy(saved)
+		// A standard (non-administrator) account may not change network
+		// settings: the app then starts the core with administrator rights.
+		if strings.Contains(firstErr.Error(), "admin") && !isElevated() {
+			return nil, errNeedsAdmin
+		}
 		return nil, firstErr
 	}
 	return saved, nil

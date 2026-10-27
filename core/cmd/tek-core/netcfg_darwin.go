@@ -58,6 +58,11 @@ func run(name string, args ...string) (string, error) {
 	cmd.Stderr = &out
 	err := cmd.Run()
 	text := strings.TrimSpace(out.String())
+	// networksetup reports some failures, such as missing rights, with
+	// exit status 0 and an "** Error:" line.
+	if err == nil && strings.Contains(text, "** Error") {
+		err = errors.New("failed")
+	}
 	if err != nil {
 		if text != "" {
 			return text, fmt.Errorf("%s %s: %s", name, strings.Join(args, " "), text)

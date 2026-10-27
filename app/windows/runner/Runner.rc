@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.tekvpn" "\0"
-            VALUE "FileDescription", "tek" "\0"
+            VALUE "CompanyName", "TekVPN" "\0"
+            VALUE "FileDescription", "Tek" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "tek" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.tekvpn. All rights reserved." "\0"
-            VALUE "OriginalFilename", "tek.exe" "\0"
-            VALUE "ProductName", "tek" "\0"
+            VALUE "InternalName", "Tek" "\0"
+            VALUE "LegalCopyright", "(C) 2026 TekVPN" "\0"
+            VALUE "OriginalFilename", "Tek.exe" "\0"
+            VALUE "ProductName", "Tek" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -72,7 +72,9 @@ func (o *perConnOption) takeString() string {
 	if p == 0 {
 		return ""
 	}
-	s := windows.UTF16PtrToString((*uint16)(unsafe.Pointer(p)))
+	// The string was allocated by WinINet, not by Go: read the field as the
+	// pointer it holds.
+	s := windows.UTF16PtrToString(*(**uint16)(unsafe.Pointer(&o.value)))
 	_, _, _ = procGlobalFree.Call(p)
 	return s
 }

@@ -59,6 +59,14 @@ class DesktopEngine extends TekEngine {
   Future<void> init(String assetDir) async {
     _assetDir = assetDir;
     await Directory(dataDir).create(recursive: true);
+    if (Platform.isMacOS) {
+      // A downloaded app comes with every file marked as quarantined. The
+      // person has already allowed Tek itself, so the mark is taken off the
+      // core it starts; otherwise macOS could block it again.
+      try {
+        await Process.run('/usr/bin/xattr', ['-d', 'com.apple.quarantine', corePath]);
+      } catch (_) {}
+    }
     _poll = Timer.periodic(const Duration(milliseconds: 1500), (_) => _refresh());
   }
 

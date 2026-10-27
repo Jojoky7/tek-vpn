@@ -48,6 +48,53 @@ func child(m map[string]any, key string) map[string]any {
 	return created
 }
 
+// sanitize drops the parts of a config that could make tek-core write files
+// or open extra listeners with its rights (it runs as administrator in the
+// "all traffic" mode, and anyone holding the API token may send a config).
+// Tek's own configs never use them.
+func (c xrayConfig) sanitize() {
+	if log := asMap(c["log"]); log != nil {
+		delete(log, "access")
+		delete(log, "error")
+	}
+	delete(c, "api")
+	delete(c, "metrics")
+	if _, ok := c["inbounds"]; ok {
+		kept := []any{}
+		for _, item := range c.list("inbounds") {
+			in := asMap(item)
+			if in == nil {
+				continue
+			}
+			// Only IP listeners: no unix sockets in arbitrary places.
+			if listen, ok := in["listen"].(string); ok && listen != "" {
+				if _, err := netip.ParseAddr(listen); err != nil {
+					continue
+				}
+			}
+			kept = append(kept, in)
+		}
+		c["inbounds"] = kept
+	}
+	stripKeys(map[string]any(c), "certificateFile", "keyFile")
+}
+
+func stripKeys(v any, keys ...string) {
+	switch t := v.(type) {
+	case map[string]any:
+		for _, k := range keys {
+			delete(t, k)
+		}
+		for _, child := range t {
+			stripKeys(child, keys...)
+		}
+	case []any:
+		for _, child := range t {
+			stripKeys(child, keys...)
+		}
+	}
+}
+
 // bindOutbounds makes every outbound that opens real sockets use the given
 // interface. In TUN mode the default route points into the tunnel, so
 // without this Xray's own connections would loop back into it.

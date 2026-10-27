@@ -113,6 +113,7 @@ func (s *session) start(req StartRequest) error {
 	if err != nil {
 		return err
 	}
+	cfg.sanitize()
 
 	switch req.Mode {
 	case "tun":
@@ -331,6 +332,18 @@ func serve(args []string) error {
 		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 8<<20)).Decode(&req); err != nil {
 			writeError(w, err)
 			return
+		}
+		if len(req.Config) > 0 {
+			cfg, err := parseConfig(req.Config)
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			cfg.sanitize()
+			if req.Config, err = cfg.bytes(); err != nil {
+				writeError(w, err)
+				return
+			}
 		}
 		writeJSON(w, tek.Default.RealPing(req))
 	})
