@@ -100,9 +100,13 @@ class AppState extends ChangeNotifier {
   }
 
   /// The fastest working server; the first one when nothing is known yet.
+  /// A server in Russia is left out while there is any other: it gives a
+  /// Russian address, which is what people connect to get away from.
   ServerNode? bestServer({Set<String> exclude = const {}}) {
-    final pool = servers.where((s) => !exclude.contains(s.id)).toList();
+    var pool = servers.where((s) => !exclude.contains(s.id)).toList();
     if (pool.isEmpty) return null;
+    final abroad = pool.where((s) => s.countryCode != 'ru').toList();
+    if (abroad.isNotEmpty) pool = abroad;
     final alive = pool.where((s) => checks[s.id]?.alive == true).toList()
       ..sort((a, b) => _delay(a).compareTo(_delay(b)));
     if (alive.isNotEmpty) return alive.first;

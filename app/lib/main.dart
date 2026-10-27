@@ -115,8 +115,9 @@ Future<String> _installGeoFiles(String supportDir) async {
 }
 
 class TekApp extends StatelessWidget {
-  const TekApp({super.key, required this.state});
+  const TekApp({super.key, required this.state, this.home = const HomeScreen()});
   final AppState state;
+  final Widget home;
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +131,7 @@ class TekApp extends StatelessWidget {
         theme: tekTheme(Brightness.light),
         darkTheme: tekTheme(Brightness.dark),
         themeMode: ThemeMode.system,
-        home: const HomeScreen(),
+        home: home,
       ),
     );
   }

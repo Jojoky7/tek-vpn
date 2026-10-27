@@ -209,9 +209,7 @@ class _ServerCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  auto
-                      ? (connectedHere ? '${s.fastest} · ${server?.name ?? ''}' : s.fastestHint)
-                      : s.servers,
+                  auto ? (connectedHere ? s.fastest : s.fastestHint) : s.changeServer,
                   style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

@@ -36,6 +36,7 @@ class S {
   String get fastest => t('Самый быстрый', 'Fastest');
   String get fastestHint => t('Tek выберет сервер сам', 'Tek picks the server');
   String get servers => t('Страны', 'Locations');
+  String get changeServer => t('Сменить страну', 'Change location');
   String get check => t('Проверить', 'Check');
   String get checking => t('Проверка…', 'Checking…');
   String get notAnswering => t('не отвечает', 'not answering');
