@@ -36,6 +36,13 @@ func IsRunning() bool {
 	return running
 }
 
+// Traffic returns {"up","down"} in bytes through the "proxy" outbound since
+// the VPN started, as JSON.
+func Traffic() string {
+	up, down := tek.Default.Traffic("proxy")
+	return mustJSON(map[string]int64{"up": up, "down": down})
+}
+
 // Validate returns an empty string when Xray accepts the config, or the error.
 func Validate(configJSON string) string {
 	if err := tek.Validate([]byte(configJSON)); err != nil {

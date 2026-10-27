@@ -35,11 +35,11 @@ const (
 )
 
 var (
-	wininet                = windows.NewLazySystemDLL("wininet.dll")
-	procInternetSetOption  = wininet.NewProc("InternetSetOptionW")
-	procInternetQueryOpt   = wininet.NewProc("InternetQueryOptionW")
-	kernel32               = windows.NewLazySystemDLL("kernel32.dll")
-	procGlobalFree         = kernel32.NewProc("GlobalFree")
+	wininet               = windows.NewLazySystemDLL("wininet.dll")
+	procInternetSetOption = wininet.NewProc("InternetSetOptionW")
+	procInternetQueryOpt  = wininet.NewProc("InternetQueryOptionW")
+	kernel32              = windows.NewLazySystemDLL("kernel32.dll")
+	procGlobalFree        = kernel32.NewProc("GlobalFree")
 )
 
 // perConnOption mirrors INTERNET_PER_CONN_OPTIONW: a DWORD option followed

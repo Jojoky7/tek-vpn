@@ -216,6 +216,8 @@ type statusReply struct {
 	Tek       string `json:"tek"`
 	LastError string `json:"lastError,omitempty"`
 	PID       int    `json:"pid"`
+	Up        int64  `json:"up"`
+	Down      int64  `json:"down"`
 }
 
 func (s *session) status() statusReply {
@@ -233,6 +235,7 @@ func (s *session) status() statusReply {
 	}
 	if running {
 		r.Since = s.since.UnixMilli()
+		r.Up, r.Down = tek.Default.Traffic("proxy")
 	}
 	return r
 }

@@ -6,6 +6,7 @@ require (
 	github.com/xtls/xray-core v1.260327.0
 	golang.org/x/sys v0.43.0
 	golang.zx2c4.com/wireguard/windows v1.1.1
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -41,7 +42,6 @@ require (
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gvisor.dev/gvisor v0.0.0-20260122175437-89a5d21be8f0 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect

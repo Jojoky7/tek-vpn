@@ -23,11 +23,11 @@ const logCapacity = 3000
 // to disk: the app shows the journal on demand and the user decides whether
 // to copy it.
 type Journal struct {
-	mu      sync.Mutex
-	lines   []LogLine
-	nextID  int64
-	level   xlog.Severity
-	access  bool
+	mu     sync.Mutex
+	lines  []LogLine
+	nextID int64
+	level  xlog.Severity
+	access bool
 }
 
 // Logs is the process-wide journal.

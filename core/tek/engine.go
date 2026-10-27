@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/xtls/xray-core/core"
+	"github.com/xtls/xray-core/features/stats"
 	"github.com/xtls/xray-core/infra/conf/serial"
 )
 
@@ -101,6 +102,28 @@ func (e *Engine) Running() (bool, time.Time) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.inst != nil, e.startedAt
+}
+
+// Traffic returns the bytes sent and received through the outbound with the
+// given tag since the VPN started. The config has to turn on outbound stats
+// (policy.system.statsOutboundUplink and statsOutboundDownlink).
+func (e *Engine) Traffic(tag string) (up, down int64) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.inst == nil {
+		return 0, 0
+	}
+	m, ok := e.inst.GetFeature(stats.ManagerType()).(stats.Manager)
+	if !ok || m == nil {
+		return 0, 0
+	}
+	if c := m.GetCounter("outbound>>>" + tag + ">>>traffic>>>uplink"); c != nil {
+		up = c.Value()
+	}
+	if c := m.GetCounter("outbound>>>" + tag + ">>>traffic>>>downlink"); c != nil {
+		down = c.Value()
+	}
+	return up, down
 }
 
 // instanceForProbe returns the running instance, or a probe instance built
