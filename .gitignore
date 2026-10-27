@@ -1,0 +1,13 @@
+# Go
+core/bin/
+*.aar
+*.jar
+!app/android/gradle/wrapper/gradle-wrapper.jar
+# Build outputs
+dist/
+build/
+.dart_tool/
+# Secrets never go to the repository
+*.jks
+*.keystore
+key.properties
