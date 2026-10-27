@@ -91,6 +91,7 @@ func recoverLeftovers(dataDir string) {
 	if json.Unmarshal(data, &l) == nil {
 		if l.Proxy != nil {
 			restoreSystemProxy(l.Proxy)
+			disarmProxyRestore()
 			tek.Logs.Printf("info", "restored system proxy left by a previous session")
 		}
 		if l.Tun != nil {
@@ -173,6 +174,7 @@ func (s *session) start(req StartRequest) error {
 			if st != nil {
 				s.proxy = st
 				s.saveLeftovers()
+				armProxyRestore(s.dataDir)
 			}
 			if err != nil {
 				s.stopLocked()
@@ -198,6 +200,7 @@ func (s *session) stopLocked() {
 	if s.proxy != nil {
 		restoreSystemProxy(s.proxy)
 		s.proxy = nil
+		disarmProxyRestore()
 	}
 	_ = tek.Default.Stop()
 	if s.tun != nil {

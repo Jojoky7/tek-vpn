@@ -4,11 +4,13 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 )
 
 // proxyState holds the user's WinINET proxy settings from before connecting.
@@ -140,4 +142,36 @@ func setSystemProxy(p proxySettings) (*proxyState, error) {
 
 func restoreSystemProxy(st *proxyState) {
 	_ = applyProxy(st)
+}
+
+const (
+	runOnceKey  = `Software\Microsoft\Windows\CurrentVersion\RunOnce`
+	runOnceName = "TekRestoreProxy"
+)
+
+// armProxyRestore asks Windows to put the proxy back at the next sign-in.
+// Windows does not tell a process without a window that it is shutting
+// down, so a computer turned off while connected would otherwise keep
+// pointing the browsers at a proxy that is gone.
+func armProxyRestore(dataDir string) {
+	exe, err := os.Executable()
+	if err != nil || dataDir == "" {
+		return
+	}
+	k, _, err := registry.CreateKey(registry.CURRENT_USER, runOnceKey, registry.SET_VALUE)
+	if err != nil {
+		return
+	}
+	defer k.Close()
+	_ = k.SetStringValue(runOnceName, fmt.Sprintf(`"%s" restore -data "%s"`, exe, strings.TrimRight(dataDir, `\`)))
+}
+
+// disarmProxyRestore drops the sign-in task once the proxy is back.
+func disarmProxyRestore() {
+	k, err := registry.OpenKey(registry.CURRENT_USER, runOnceKey, registry.SET_VALUE)
+	if err != nil {
+		return
+	}
+	defer k.Close()
+	_ = k.DeleteValue(runOnceName)
 }

@@ -53,3 +53,9 @@ func watchParent(pid int, onExit func()) {
 		time.Sleep(2 * time.Second)
 	}
 }
+
+// The system proxy outlives a shutdown only on Windows, where nothing tells
+// tek-core that the computer is turning off; see sysproxy_windows.go.
+func armProxyRestore(string) {}
+
+func disarmProxyRestore() {}
