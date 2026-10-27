@@ -33,9 +33,9 @@
         ↓
 Адаптер ядра Xray   |   (будущий адаптер второго ядра)
         ↓
-Android: libXray + VpnService + tun2socks
-Windows: xray.exe + wintun (tun2socks), режим «весь трафик»
-macOS:   xray + системный прокси (TUN без аккаунта Apple недоступен)
+Android: Xray в процессе приложения + VpnService (TUN-вход Xray)
+Windows: tek-core.exe: системный прокси или «весь трафик» через wintun
+macOS:   tek-core: системный прокси или «весь трафик» через utun (с паролем администратора)
 ```
 
 ## Этапы
