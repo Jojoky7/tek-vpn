@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(S.current.error(e.key))));
+        ..showSnackBar(SnackBar(content: _ErrorText(e)));
       app.clearError();
     });
   }
@@ -293,6 +293,32 @@ class _SubscriptionCard extends StatelessWidget {
           ],
         ]),
       ),
+    );
+  }
+}
+
+/// The error's message, and for a failed connection the core's reason in
+/// small print, so that a screenshot is enough to tell what went wrong.
+class _ErrorText extends StatelessWidget {
+  const _ErrorText(this.error);
+  final AppError error;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = Text(S.current.error(error.key));
+    var detail = error.key == 'connectFailed' ? (error.detail ?? '').trim() : '';
+    if (detail.isEmpty) return title;
+    // Xray chains its errors with " > "; the last link names the cause.
+    detail = detail.split(' > ').last;
+    if (detail.length > 160) detail = '${detail.substring(0, 160)}…';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        title,
+        const SizedBox(height: 4),
+        Text(detail, style: const TextStyle(fontSize: 12, height: 1.3)),
+      ],
     );
   }
 }

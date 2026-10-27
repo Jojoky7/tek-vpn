@@ -355,12 +355,14 @@ class AppState extends ChangeNotifier {
 
   ServerNode? currentServerFor(String? id) => id == null ? bestServer() : _byId(id);
 
-  ConnectOptions _options() => ConnectOptions(
+  ConnectOptions _options({int socksPort = 10808, int httpPort = 10809}) => ConnectOptions(
         mode: isAndroid ? TunnelMode.tun : settings.desktopMode,
         ruDirect: settings.ruDirect,
         fragmentation: settings.fragmentation,
         blockQuic: settings.blockQuic,
         logLevel: settings.verboseLog ? 'debug' : 'warning',
+        socksPort: socksPort,
+        httpPort: httpPort,
       );
 
   XrayConfigBuilder _builder() => XrayConfigBuilder(servers,
@@ -439,13 +441,26 @@ class AppState extends ChangeNotifier {
     try {
       await engine.cancelPing();
       _api = await _newApiProxy();
-      final options = _options();
-      final config = _builder().connection(target, options, api: _api);
+      var options = _options();
+      if (!isAndroid && options.mode == TunnelMode.proxy) {
+        final ports = await _proxyPorts();
+        options = _options(socksPort: ports.socks, httpPort: ports.http);
+      }
+      var config = _builder().connection(target, options, api: _api);
       try {
         await _start(config, options, target);
       } on NeedsAdminException {
         // "All traffic" on a computer: ask for administrator rights once.
         await engine.elevate();
+        await _start(config, options, target);
+      } catch (e) {
+        // Another app (often a second VPN client) took a port between the
+        // check and the start: try once more on ports nobody uses.
+        if (isAndroid || !'$e'.contains('failed to listen')) rethrow;
+        final ports = await _proxyPorts(preferred: false);
+        options = _options(socksPort: ports.socks, httpPort: ports.http);
+        _api = await _newApiProxy();
+        config = _builder().connection(target, options, api: _api);
         await _start(config, options, target);
       }
       final s = await _waitStarted();
@@ -509,6 +524,31 @@ class AppState extends ChangeNotifier {
     connectedSince = null;
     _api = null;
     notifyListeners();
+  }
+
+  /// Ports for the local proxy that the system proxy points to: the usual
+  /// 10808 and 10809, or free ones when another app, such as a second VPN
+  /// client, already listens there.
+  static Future<({int socks, int http})> _proxyPorts({bool preferred = true}) async {
+    Future<ServerSocket?> grab(int port) async {
+      try {
+        return await ServerSocket.bind(InternetAddress.loopbackIPv4, port);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    var a = preferred ? await grab(10808) : null;
+    var b = a == null ? null : await grab(10809);
+    if (a == null || b == null) {
+      await a?.close();
+      a = await grab(0);
+      b = await grab(0);
+    }
+    final ports = (socks: a!.port, http: b!.port);
+    await a.close();
+    await b.close();
+    return ports;
   }
 
   static Future<ApiProxy> _newApiProxy() async {

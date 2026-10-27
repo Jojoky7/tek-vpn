@@ -30,6 +30,10 @@ import 'package:tek/src/xray/config_builder.dart';
 class FakeEngine extends TekEngine {
   final _status = StreamController<EngineStatus>.broadcast();
   EngineStatus _current = EngineStatus.stopped;
+  final starts = <ConnectOptions>[];
+
+  /// Errors the next start() calls throw, as a real core would.
+  final failures = <String>[];
 
   void _emit(EngineStatus s) {
     _current = s;
@@ -54,6 +58,8 @@ class FakeEngine extends TekEngine {
       AndroidVpnOptions android = const AndroidVpnOptions(),
       String serverName = '',
       String serverId = ''}) async {
+    starts.add(options);
+    if (failures.isNotEmpty) throw StateError(failures.removeAt(0));
     _emit(EngineStatus(CoreState.running,
         since: DateTime.now().subtract(const Duration(minutes: 12, seconds: 7)),
         mode: mode,
@@ -289,5 +295,35 @@ void main() {
     await tester.pumpWidget(Container());
     app.dispose();
     debugDefaultTargetPlatformOverride = null;
+  });
+
+  test('computer: proxy ports move when another app holds them', () async {
+    final app = await _app(withSubscription: true, android: false);
+    final engine = app.engine as FakeEngine;
+    final taken = await ServerSocket.bind(InternetAddress.loopbackIPv4, 10808)
+        .then<ServerSocket?>((s) => s, onError: (_) => null);
+    await app.connect();
+    expect(app.conn, ConnState.connected);
+    if (taken != null) expect(engine.starts.last.socksPort, isNot(10808));
+    await taken?.close();
+    await app.disconnect();
+
+    // The port is taken between the check and the start: one more try.
+    engine.failures.add('app/proxyman/inbound: failed to listen TCP on 10808 > '
+        'listen tcp 127.0.0.1:10808: bind: address already in use');
+    engine.starts.clear();
+    await app.connect();
+    expect(app.conn, ConnState.connected);
+    expect(engine.starts, hasLength(2));
+    expect(engine.starts.last.socksPort, isNot(10808));
+    await app.disconnect();
+
+    // Any other failure is reported with its reason.
+    engine.failures.add('cannot set the system proxy: access denied');
+    await app.connect();
+    expect(app.conn, ConnState.disconnected);
+    expect(app.error?.key, 'connectFailed');
+    expect(app.error?.detail, contains('system proxy'));
+    app.dispose();
   });
 }
