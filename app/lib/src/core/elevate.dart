@@ -125,7 +125,7 @@ Future<void> _osascriptAdmin(String exe, List<String> args) async {
       '${[exe, ...args].map(_shQuote).join(' ')} > /dev/null 2>&1 &';
   final script =
       'do shell script ${_appleScriptString(command)} with administrator privileges '
-      'with prompt ${_appleScriptString('Tek просит пароль, чтобы пустить весь трафик через VPN.')}';
+      'with prompt ${_appleScriptString('Tek просит пароль администратора, чтобы включить VPN.')}';
   final result = await Process.run('/usr/bin/osascript', ['-e', script]);
   if (result.exitCode != 0) {
     final err = '${result.stderr}';

@@ -68,6 +68,9 @@ class DesktopEngine extends TekEngine {
       } catch (_) {}
     }
     _poll = Timer.periodic(const Duration(milliseconds: 1500), (_) => _refresh());
+    // Start the core right away: if the computer or Tek crashed while
+    // connected, it puts the network settings back as it starts.
+    unawaited(_ensureCore().then<void>((_) {}, onError: (_) {}));
   }
 
   Future<_CoreInfo> _ensureCore({bool elevated = false}) async {

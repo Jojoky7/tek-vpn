@@ -43,6 +43,15 @@ class SubscriptionService {
         s.toLowerCase().startsWith('tek://import?')) {
       s = Uri.tryParse(s)?.queryParameters['url'] ?? '';
     }
+    // A link inside a link may arrive percent-encoded, or with the double
+    // slash after the scheme folded into one.
+    if (RegExp(r'^https?%3a', caseSensitive: false).hasMatch(s)) {
+      try {
+        s = Uri.decodeComponent(s);
+      } catch (_) {}
+    }
+    s = s.replaceFirstMapped(
+        RegExp(r'^(https?):/(?!/)', caseSensitive: false), (m) => '${m[1]}://');
     if (!s.contains('://') && s.contains('.') && !s.contains(' ')) s = 'https://$s';
     final uri = Uri.tryParse(s);
     if (uri == null || !(uri.isScheme('https') || uri.isScheme('http')) || uri.host.isEmpty) {
