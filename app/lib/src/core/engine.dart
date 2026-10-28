@@ -54,10 +54,22 @@ class LogLine {
 
   factory LogLine.fromJson(Map<String, dynamic> j) => LogLine(
         (j['id'] as num).toInt(),
-        DateTime.tryParse(j['time']?.toString() ?? '') ?? DateTime.now(),
+        _parseTime(j['time']?.toString() ?? ''),
         j['level']?.toString() ?? 'info',
         j['text']?.toString() ?? '',
       );
+
+  /// The core writes the time of day only ("15:04:05.000"), which
+  /// DateTime.parse does not read: put it on today's date.
+  static DateTime _parseTime(String s) {
+    final full = DateTime.tryParse(s);
+    if (full != null) return full;
+    final m = RegExp(r'^(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?$').firstMatch(s);
+    final now = DateTime.now();
+    if (m == null) return now;
+    return DateTime(now.year, now.month, now.day, int.parse(m[1]!), int.parse(m[2]!),
+        int.parse(m[3]!), int.parse((m[4] ?? '0').padRight(3, '0')));
+  }
 }
 
 /// Thrown when the connection needs administrator rights (the "all
