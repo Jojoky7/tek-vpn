@@ -13,6 +13,11 @@ type uplink struct {
 	Index   int        // interface index
 	Gateway netip.Addr // default gateway on that interface
 	LUID    uint64     // Windows only
+	// Addr is the interface's IPv4 address (Windows only). Windows picks the
+	// source address from the routing table even for a socket bound to an
+	// interface, and with the tunnel up that is the tunnel's address, so
+	// direct connections are also bound to this one.
+	Addr netip.Addr
 }
 
 func handleSignals(quit func()) {

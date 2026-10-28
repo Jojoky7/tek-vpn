@@ -138,13 +138,13 @@ func (s *session) start(req StartRequest) error {
 		if err != nil {
 			return fmt.Errorf("cannot find the network connection: %w", err)
 		}
-		tek.Logs.Printf("info", "uplink %s (index %d, gateway %s)", up.Name, up.Index, up.Gateway)
+		tek.Logs.Printf("info", "uplink %s (index %d, gateway %s, address %s)", up.Name, up.Index, up.Gateway, up.Addr)
 		servers := resolveHosts(cfg.serverHosts())
 		name := tunName(opts.Name)
 		if !cfg.setTunName(name) {
 			return errors.New("config has no tun inbound")
 		}
-		cfg.bindOutbounds(up.Name)
+		cfg.bindOutbounds(up.Name, up.Addr)
 		data, err := cfg.bytes()
 		if err != nil {
 			return err

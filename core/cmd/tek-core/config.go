@@ -97,8 +97,11 @@ func stripKeys(v any, keys ...string) {
 
 // bindOutbounds makes every outbound that opens real sockets use the given
 // interface. In TUN mode the default route points into the tunnel, so
-// without this Xray's own connections would loop back into it.
-func (c xrayConfig) bindOutbounds(iface string) {
+// without this Xray's own connections would loop back into it. When source
+// is set, the direct ("freedom") outbounds also send from that address:
+// Windows otherwise gives their packets the tunnel's address, and they never
+// come back. Connections to the servers are covered by host routes.
+func (c xrayConfig) bindOutbounds(iface string, source netip.Addr) {
 	for _, item := range c.list("outbounds") {
 		ob := asMap(item)
 		if ob == nil {
@@ -107,6 +110,10 @@ func (c xrayConfig) bindOutbounds(iface string) {
 		switch ob["protocol"] {
 		case "blackhole", "dns", "loopback":
 			continue
+		case "freedom":
+			if source.IsValid() {
+				ob["sendThrough"] = source.String()
+			}
 		}
 		stream := child(ob, "streamSettings")
 		sockopt := child(stream, "sockopt")

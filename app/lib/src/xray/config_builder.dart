@@ -70,6 +70,7 @@ class XrayConfigBuilder {
   static const proxyTag = 'proxy';
   static const tunAddress = '172.19.0.1';
   static const tunDns = '172.19.0.2';
+  static const tunNet = '172.19.0.0/30';
   static const tunMtu = 1500;
 
   static const _dnsDirect = '77.88.8.8';
@@ -198,9 +199,10 @@ class XrayConfigBuilder {
         'outboundTag': proxyTag,
       },
       if (o.mode == TunnelMode.tun)
-        // Anything else sent to the tunnel's DNS address, such as Android's
-        // private DNS probe on port 853, fails at once.
-        {'ip': ['$tunDns/32'], 'outboundTag': 'block'},
+        // Anything else sent into the tunnel's own network, such as
+        // Android's private DNS probe on port 853 or Windows' NetBIOS
+        // broadcasts, fails at once instead of going out and back in.
+        {'ip': ['$tunNet'], 'outboundTag': 'block'},
       {'ip': _privateNets, 'outboundTag': 'direct'},
       if (o.mode == TunnelMode.tun)
         // The servers are reached over IPv4; IPv6 is closed fast so that

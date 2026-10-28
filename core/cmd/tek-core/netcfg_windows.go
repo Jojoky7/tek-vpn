@@ -74,7 +74,34 @@ func detectUplink() (uplink, error) {
 	if best.Name == "" {
 		return uplink{}, errors.New("no default route")
 	}
+	best.Addr = interfaceIPv4(winipcfg.LUID(best.LUID))
 	return best, nil
+}
+
+// interfaceIPv4 returns the interface's IPv4 address, preferring a routable
+// one over a link-local one.
+func interfaceIPv4(luid winipcfg.LUID) netip.Addr {
+	rows, err := winipcfg.GetUnicastIPAddressTable(windows.AF_INET)
+	if err != nil {
+		return netip.Addr{}
+	}
+	var found netip.Addr
+	for i := range rows {
+		if rows[i].InterfaceLUID != luid {
+			continue
+		}
+		ip := rows[i].Address.Addr()
+		if !ip.Is4() {
+			continue
+		}
+		if !ip.IsLinkLocalUnicast() {
+			return ip
+		}
+		if !found.IsValid() {
+			found = ip
+		}
+	}
+	return found
 }
 
 // tunLUID finds the Wintun adapter Xray created. Xray derives the adapter
