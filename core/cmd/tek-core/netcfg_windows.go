@@ -179,6 +179,10 @@ func setupTun(name string, up uplink, servers []netip.Addr, opts tunOptions) (*t
 		}
 	}
 
+	// From here on, every address Xray dials gets a host route like the
+	// servers' (see bypass_windows.go).
+	bypass.arm(up, servers)
+
 	luid, err := adapterLUID(name)
 	if err != nil {
 		return st, err
@@ -254,6 +258,7 @@ func tuneInterface(luid winipcfg.LUID, family winipcfg.AddressFamily, mtu int) e
 }
 
 func teardownTun(st *tunState) {
+	bypass.disarm()
 	upLUID := winipcfg.LUID(st.UplinkLUID)
 	gateway, err := netip.ParseAddr(st.Gateway)
 	if err == nil {
