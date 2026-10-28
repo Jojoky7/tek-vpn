@@ -197,9 +197,14 @@ func setupTun(name string, up uplink, servers []netip.Addr, opts tunOptions) (*t
 	}); err != nil {
 		return st, fmt.Errorf("set address: %w", err)
 	}
+	// A default route of its own that wins on metric (the interface metric
+	// is set to 0 below), not the 0.0.0.0/1 + 128.0.0.0/1 pair: Windows
+	// honours a socket bound to the real interface (IP_UNICAST_IF) only when
+	// that interface's own default route can match, and the more specific
+	// halves beat it. With them, Xray's direct connections went back into
+	// the tunnel. WireGuard for Windows routes the same way.
 	routes4 := []*winipcfg.RouteData{
-		{Destination: netip.MustParsePrefix("0.0.0.0/1"), NextHop: netip.IPv4Unspecified()},
-		{Destination: netip.MustParsePrefix("128.0.0.0/1"), NextHop: netip.IPv4Unspecified()},
+		{Destination: netip.MustParsePrefix("0.0.0.0/0"), NextHop: netip.IPv4Unspecified()},
 	}
 	if err := retryNotFound(func() error { return luid.SetRoutesForFamily(windows.AF_INET, routes4) }); err != nil {
 		return st, fmt.Errorf("set routes: %w", err)
@@ -217,8 +222,7 @@ func setupTun(name string, up uplink, servers []netip.Addr, opts tunOptions) (*t
 		addr6 := netip.MustParsePrefix("fdfe:dcba:9876::1/126")
 		if err := luid.SetIPAddressesForFamily(windows.AF_INET6, []netip.Prefix{addr6}); err == nil {
 			routes6 := []*winipcfg.RouteData{
-				{Destination: netip.MustParsePrefix("::/1"), NextHop: netip.IPv6Unspecified()},
-				{Destination: netip.MustParsePrefix("8000::/1"), NextHop: netip.IPv6Unspecified()},
+				{Destination: netip.MustParsePrefix("::/0"), NextHop: netip.IPv6Unspecified()},
 			}
 			if err := luid.SetRoutesForFamily(windows.AF_INET6, routes6); err != nil {
 				tek.Logs.Printf("warning", "ipv6 routes: %v", err)
