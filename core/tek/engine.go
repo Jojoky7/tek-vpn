@@ -60,7 +60,7 @@ func (e *Engine) Start(configJSON []byte) error {
 
 	e.closeProbeLocked()
 	if e.inst != nil {
-		_ = e.inst.Close()
+		closeInstance(e.inst)
 		e.inst = nil
 	}
 
@@ -74,7 +74,7 @@ func (e *Engine) Start(configJSON []byte) error {
 		return err
 	}
 	if err := inst.Start(); err != nil {
-		_ = inst.Close()
+		closeInstance(inst)
 		return err
 	}
 	e.inst = inst
@@ -91,9 +91,20 @@ func (e *Engine) Stop() error {
 	if e.inst == nil {
 		return nil
 	}
-	err := e.inst.Close()
+	err := closeInstance(e.inst)
 	e.inst = nil
 	Logs.Printf("info", "Xray stopped")
+	return err
+}
+
+// closeInstance closes an instance together with its tun device, which
+// Xray itself leaves open.
+func closeInstance(inst *core.Instance) error {
+	tuns := tunInbounds(inst)
+	err := inst.Close()
+	for _, t := range tuns {
+		closeTun(t)
+	}
 	return err
 }
 
