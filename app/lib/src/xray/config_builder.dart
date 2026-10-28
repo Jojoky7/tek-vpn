@@ -202,7 +202,7 @@ class XrayConfigBuilder {
         // Anything else sent into the tunnel's own network, such as
         // Android's private DNS probe on port 853 or Windows' NetBIOS
         // broadcasts, fails at once instead of going out and back in.
-        {'ip': ['$tunNet'], 'outboundTag': 'block'},
+        {'ip': [tunNet], 'outboundTag': 'block'},
       {'ip': _privateNets, 'outboundTag': 'direct'},
       if (o.mode == TunnelMode.tun)
         // The servers are reached over IPv4; IPv6 is closed fast so that
