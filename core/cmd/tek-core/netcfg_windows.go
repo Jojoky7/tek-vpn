@@ -94,6 +94,44 @@ func tunLUID(name string) (winipcfg.LUID, error) {
 	return 0, fmt.Errorf("tunnel adapter not found: %w", lastErr)
 }
 
+// adapterLUID finds the adapter Xray is running on and waits until Windows
+// has brought up its IPv4 side: the adapter appears before that, and
+// addresses and routes written too early are refused.
+func adapterLUID(name string) (winipcfg.LUID, error) {
+	var luid winipcfg.LUID
+	if v, err := tek.Default.TunLUID(); err == nil {
+		luid = winipcfg.LUID(v)
+	} else {
+		tek.Logs.Printf("warning", "adapter from Xray: %v; looking it up by name", err)
+		if luid, err = tunLUID(name); err != nil {
+			return 0, err
+		}
+	}
+	var lastErr error
+	for i := 0; i < 50; i++ {
+		if _, err := luid.IPInterface(windows.AF_INET); err == nil {
+			return luid, nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return 0, fmt.Errorf("tunnel adapter has no IPv4 interface: %w", lastErr)
+}
+
+// retryNotFound repeats a network change that Windows refuses with "Element
+// not found" while the adapter is still settling.
+func retryNotFound(f func() error) error {
+	var err error
+	for i := 0; i < 20; i++ {
+		if err = f(); !errors.Is(err, windows.ERROR_NOT_FOUND) {
+			return err
+		}
+		time.Sleep(150 * time.Millisecond)
+	}
+	return err
+}
+
 func setupTun(name string, up uplink, servers []netip.Addr, opts tunOptions) (*tunState, error) {
 	st := &tunState{Name: name, UplinkLUID: up.LUID, Gateway: up.Gateway.String()}
 	upLUID := winipcfg.LUID(up.LUID)
@@ -114,7 +152,7 @@ func setupTun(name string, up uplink, servers []netip.Addr, opts tunOptions) (*t
 		}
 	}
 
-	luid, err := tunLUID(name)
+	luid, err := adapterLUID(name)
 	if err != nil {
 		return st, err
 	}
@@ -127,17 +165,19 @@ func setupTun(name string, up uplink, servers []netip.Addr, opts tunOptions) (*t
 		return st, err
 	}
 
-	if err := luid.SetIPAddressesForFamily(windows.AF_INET, []netip.Prefix{address}); err != nil {
+	if err := retryNotFound(func() error {
+		return luid.SetIPAddressesForFamily(windows.AF_INET, []netip.Prefix{address})
+	}); err != nil {
 		return st, fmt.Errorf("set address: %w", err)
 	}
 	routes4 := []*winipcfg.RouteData{
 		{Destination: netip.MustParsePrefix("0.0.0.0/1"), NextHop: netip.IPv4Unspecified()},
 		{Destination: netip.MustParsePrefix("128.0.0.0/1"), NextHop: netip.IPv4Unspecified()},
 	}
-	if err := luid.SetRoutesForFamily(windows.AF_INET, routes4); err != nil {
+	if err := retryNotFound(func() error { return luid.SetRoutesForFamily(windows.AF_INET, routes4) }); err != nil {
 		return st, fmt.Errorf("set routes: %w", err)
 	}
-	if err := luid.SetDNS(windows.AF_INET, []netip.Addr{dns}, nil); err != nil {
+	if err := retryNotFound(func() error { return luid.SetDNS(windows.AF_INET, []netip.Addr{dns}, nil) }); err != nil {
 		return st, fmt.Errorf("set dns: %w", err)
 	}
 	if err := tuneInterface(luid, windows.AF_INET, opts.MTU); err != nil {

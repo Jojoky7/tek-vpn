@@ -39,7 +39,7 @@ require (
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
-	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
+	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
