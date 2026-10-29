@@ -42,6 +42,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+	case "daemon":
+		if err := daemon(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	case "restore":
 		// Undo system changes left by a crashed session (proxy, routes, DNS).
 		fs := flag.NewFlagSet("restore", flag.ExitOnError)
@@ -59,5 +64,6 @@ func usage() {
   tek-core version
   tek-core validate -config FILE
   tek-core serve -data DIR -token-file FILE -ready-file FILE [-parent PID]
+  tek-core daemon -owner UID -dir DIR
   tek-core restore -data DIR`)
 }

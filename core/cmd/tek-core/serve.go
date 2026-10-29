@@ -268,8 +268,46 @@ func serve(args []string) error {
 		return errors.New("token is too short")
 	}
 
-	recoverLeftovers(*dataDir)
-	sess := &session{dataDir: *dataDir}
+	ready := func(port int) error {
+		data, _ := json.Marshal(map[string]any{"port": port, "pid": os.Getpid(), "elevated": isElevated(), "version": version})
+		return writeFileAtomic(*readyFile, data, 0o644, -1)
+	}
+	return runAPI(apiOptions{dataDir: *dataDir, token: token, parent: *parent, ready: ready})
+}
+
+type apiOptions struct {
+	dataDir string
+	token   string
+	// parent is the app's process: tek-core stops when it exits.
+	parent int
+	// daemon is the macOS helper that launchd keeps running: "shutdown"
+	// only disconnects, the service itself stays for the next connection.
+	daemon bool
+	// ready publishes the port once the API listens.
+	ready func(port int) error
+}
+
+// writeFileAtomic writes the file next to its final name and renames it,
+// so a reader never sees half of it. owner >= 0 hands the file to that
+// user (the helper runs as root but its file is for the app).
+func writeFileAtomic(path string, data []byte, mode os.FileMode, owner int) error {
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, mode); err != nil {
+		return err
+	}
+	if owner >= 0 {
+		if err := os.Chown(tmp, owner, -1); err != nil {
+			_ = os.Remove(tmp)
+			return err
+		}
+	}
+	return os.Rename(tmp, path)
+}
+
+func runAPI(o apiOptions) error {
+	token := o.token
+	recoverLeftovers(o.dataDir)
+	sess := &session{dataDir: o.dataDir}
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -380,6 +418,10 @@ func serve(args []string) error {
 	})
 	handle("/v1/shutdown", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]bool{"ok": true})
+		if o.daemon {
+			go sess.stop()
+			return
+		}
 		go quit()
 	})
 
@@ -391,17 +433,12 @@ func serve(args []string) error {
 		}
 	}()
 
-	ready, _ := json.Marshal(map[string]any{"port": port, "pid": os.Getpid(), "elevated": isElevated(), "version": version})
-	tmp := *readyFile + ".tmp"
-	if err := os.WriteFile(tmp, ready, 0o644); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, *readyFile); err != nil {
+	if err := o.ready(port); err != nil {
 		return err
 	}
 
-	if *parent > 0 {
-		go watchParent(*parent, func() {
+	if o.parent > 0 {
+		go watchParent(o.parent, func() {
 			tek.Logs.Printf("info", "the app has exited, stopping")
 			quit()
 		})

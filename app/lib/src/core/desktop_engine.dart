@@ -98,6 +98,16 @@ class DesktopEngine extends TekEngine {
     if (!File(exe).existsSync()) {
       throw StateError('tek-core is missing next to the app: $exe');
     }
+    if (Platform.isMacOS) {
+      // The helper serves everything once it is installed; the password
+      // is only asked to install it, or after an update of the app.
+      final helper = await _macHelper();
+      if (helper != null) return helper;
+      if (elevated) {
+        final installed = await _installMacHelper(exe);
+        if (installed != null) return installed;
+      }
+    }
     final rnd = Random.secure();
     final token =
         List.generate(32, (_) => rnd.nextInt(256).toRadixString(16).padLeft(2, '0'))
@@ -141,6 +151,64 @@ class DesktopEngine extends TekEngine {
         await tokenFile.delete().catchError((_) => tokenFile);
       }
     }
+  }
+
+  int? _uidCache;
+  String? _bundledVersion;
+
+  Future<int> _uid() async {
+    final cached = _uidCache;
+    if (cached != null) return cached;
+    final r = await Process.run('/usr/bin/id', ['-u']);
+    return _uidCache = int.parse('${r.stdout}'.trim());
+  }
+
+  /// The version of the tek-core inside the app, so an older helper left
+  /// by a previous version is replaced.
+  Future<String> _coreVersion() async {
+    final cached = _bundledVersion;
+    if (cached != null) return cached;
+    final r = await Process.run(corePath, ['version']);
+    final j = jsonDecode('${r.stdout}') as Map;
+    return _bundledVersion = j['tek']?.toString() ?? '';
+  }
+
+  /// The installed macOS helper, when it runs and matches this app.
+  Future<_CoreInfo?> _macHelper() async {
+    try {
+      final file = File(MacHelper.infoFile(await _uid()));
+      if (!file.existsSync()) return null;
+      final j = jsonDecode(await file.readAsString()) as Map;
+      if (j['version']?.toString() != await _coreVersion()) return null;
+      final info = _CoreInfo((j['port'] as num).toInt(), (j['pid'] as num).toInt(), true,
+          j['token'].toString());
+      final s = await _call(info, 'GET', '/v1/status').timeout(const Duration(seconds: 3)) as Map;
+      if (s['elevated'] != true) return null;
+      unawaited(_call(info, 'POST', '/v1/loglevel', {'level': _logLevel})
+          .then<void>((_) {}, onError: (_) {}));
+      return info;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Installs the helper (one password prompt) and waits for it. Returns
+  /// null when that did not work, so the core is started the old way.
+  Future<_CoreInfo?> _installMacHelper(String exe) async {
+    try {
+      await MacHelper.install(exe, await _uid());
+    } on ElevationCancelled {
+      rethrow;
+    } catch (_) {
+      return null;
+    }
+    final deadline = DateTime.now().add(const Duration(seconds: 20));
+    while (DateTime.now().isBefore(deadline)) {
+      final helper = await _macHelper();
+      if (helper != null) return helper;
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    }
+    return null;
   }
 
   Future<dynamic> _call(_CoreInfo core, String method, String path,

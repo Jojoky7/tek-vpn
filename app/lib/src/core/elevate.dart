@@ -123,9 +123,68 @@ String _appleScriptString(String s) =>
 Future<void> _osascriptAdmin(String exe, List<String> args) async {
   final command =
       '${[exe, ...args].map(_shQuote).join(' ')} > /dev/null 2>&1 &';
+  await _runAsAdmin(command, 'Tek просит пароль администратора, чтобы включить VPN.');
+}
+
+/// The macOS helper: tek-core as a launchd service with root rights, so the
+/// password is asked once and not on every connection.
+class MacHelper {
+  static const label = 'com.tekvpn.core';
+  static const binary = '/Library/PrivilegedHelperTools/com.tekvpn.core';
+  static const plist = '/Library/LaunchDaemons/com.tekvpn.core.plist';
+  static const dir = '/Library/Application Support/Tek';
+
+  /// The file where the helper leaves its port and token for [uid].
+  static String infoFile(int uid) => '$dir/helper-$uid.json';
+
+  /// Copies [core] out of the app and registers it with launchd (one
+  /// password prompt). Installing again replaces and restarts it.
+  static Future<void> install(String core, int uid) async {
+    final tmp = await Directory.systemTemp.createTemp('tek-helper');
+    try {
+      final plistFile = File('${tmp.path}/$label.plist');
+      await plistFile.writeAsString(plistFor(uid));
+      final steps = [
+        'install -d -m 755 -o root -g wheel /Library/PrivilegedHelperTools ${_shQuote(dir)}',
+        'install -m 755 -o root -g wheel ${_shQuote(core)} ${_shQuote(binary)}',
+        '{ xattr -c ${_shQuote(binary)} 2>/dev/null || true; }',
+        'install -m 644 -o root -g wheel ${_shQuote(plistFile.path)} ${_shQuote(plist)}',
+        'rm -f ${_shQuote(infoFile(uid))}',
+        '{ launchctl bootout system/$label 2>/dev/null; sleep 1; true; }',
+        '{ launchctl bootstrap system ${_shQuote(plist)} 2>/dev/null || launchctl kickstart -k system/$label; }',
+      ];
+      await _runAsAdmin(steps.join(' && '),
+          'Tek просит пароль администратора один раз, чтобы режим «весь трафик» включался без него.');
+    } finally {
+      await tmp.delete(recursive: true).catchError((_) => tmp);
+    }
+  }
+
+  static String plistFor(int uid) => '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$label</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>$binary</string>
+    <string>daemon</string>
+    <string>-owner</string>
+    <string>$uid</string>
+    <string>-dir</string>
+    <string>$dir</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>
+''';
+}
+
+Future<void> _runAsAdmin(String command, String prompt) async {
   final script =
       'do shell script ${_appleScriptString(command)} with administrator privileges '
-      'with prompt ${_appleScriptString('Tek просит пароль администратора, чтобы включить VPN.')}';
+      'with prompt ${_appleScriptString(prompt)}';
   final result = await Process.run('/usr/bin/osascript', ['-e', script]);
   if (result.exitCode != 0) {
     final err = '${result.stderr}';

@@ -34,6 +34,19 @@ macOS:   tek-core, системный прокси или «весь трафи�
 запускается с правами администратора. Если приложение закрылось аварийно,
 `tek-core` сам возвращает настройки сети.
 
+На macOS права нужны один раз: приложение ставит помощник, копию `tek-core`
+в `/Library/PrivilegedHelperTools/com.tekvpn.core`, который launchd держит
+запущенным (`/Library/LaunchDaemons/com.tekvpn.core.plist`). Порт и токен он
+пишет в `/Library/Application Support/Tek/helper-<uid>.json`, читать этот файл
+может только этот пользователь. После обновления приложения помощник
+ставится заново, с одним запросом пароля. Удалить его:
+
+```
+sudo launchctl bootout system/com.tekvpn.core
+sudo rm /Library/LaunchDaemons/com.tekvpn.core.plist /Library/PrivilegedHelperTools/com.tekvpn.core
+sudo rm -r "/Library/Application Support/Tek"
+```
+
 ## Сборка
 
 Нужны Flutter 3.47.8, Go 1.26.
