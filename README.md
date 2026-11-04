@@ -3,6 +3,9 @@
 VPN-приложение TekVPN для Android, Windows и macOS. Подключается по ссылке
 подписки tekvpn.com. Внутри Xray 26.3.27.
 
+Готовые файлы всех версий с описанием изменений лежат в ветке
+[releases](https://github.com/Jojoky7/tek-vpn/tree/releases).
+
 ## Что где
 
 | Папка | Что внутри |
@@ -81,5 +84,8 @@ sudo rm -r "/Library/Application Support/Tek"
   вручную: `GOWORK="$(_xray/workspace.sh)" GOOS=darwin go build ./cmd/tek-core`
   в `core/`.
 - Иконки: `python3 tool/brand/make_icons.py` рисует их все заново.
+- Выпуск: файлы новой версии кладутся в ветку `releases`, в папку с номером
+  версии вместе с SHA256SUMS.txt, и описываются в README этой ветки. Ветка
+  не связана с `main`, поэтому сборки не попадают в код и в CI.
 
 Тесты: `flutter test` в `app/`, `go test ./...` в `core/`.
