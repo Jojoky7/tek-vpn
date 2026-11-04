@@ -1,0 +1,4 @@
+7e00d54e76d5a63ca91f5402dc25a3c52820e7a6ff3cdcd99a5040df16a346fa  Tek-1.0.0-android.apk
+92805a02eeadf2c05b1a6ab83dd3b8ebe72857d85d1c92fffff1f1c29fe76737  Tek-1.0.0-macos.dmg
+fcdeaccf81454721c1e261fd45fcf11d644ac11b6d0ae9814d7a6b1579b98a64  Tek-1.0.0-windows-x64-portable.zip
+895cf53b767a9db89bece0c2c599edc5b2a1ce53b00166abb5b0cbcca58235c2  Tek-1.0.0-windows-x64-setup.exe
