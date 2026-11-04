@@ -1,0 +1,2 @@
+aa23881d16666ae83d7eb48cd23477d8971e834ebc72fdfb482e3905b6a07da5  Tek-1.0.6-macos.dmg
+9ffe1bc717b97d434722c6a9720befa8cd4ae19ee59efeaeec4114545643cb20  Tek-1.0.6-windows-x64-setup.exe
