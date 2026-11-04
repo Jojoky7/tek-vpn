@@ -1,9 +1,11 @@
 # Publishes the built files from the releases branch as GitHub releases:
-# one release per version folder there, tagged v<version> at the commit the
-# version was built from (versions.txt on that branch), with the notes from
-# notes/<version>.md. A person starts it: Actions → Releases → Run workflow.
-# Running it again brings the notes and files of existing releases up to
-# date. Tags made with the workflow's own token do not start Desktop builds.
+# one release per version folder there, tagged v<version>, with the notes
+# from notes/<version>.md. versions.txt on that branch names the commit each
+# version was built from; the tag itself points at a one-file commit that
+# names it, because this token may not tag commits holding workflow files.
+# A person starts it: Actions → Releases → Run workflow. Running it again
+# brings the notes and files of existing releases up to date. Tags made with
+# the workflow's own token do not start Desktop builds.
 name: Releases
 
 on:
@@ -37,7 +39,7 @@ jobs:
           set -euo pipefail
           latest=$(grep -v '^#' versions.txt | cut -d' ' -f1 | sort -V | tail -1)
           found=0
-          while read -r v sha; do
+          while read -r v src; do
             case "$v" in '' | '#'*) continue ;; esac
             [ "$WANT" = all ] || [ "$WANT" = "$v" ] || continue
             found=1
@@ -45,12 +47,28 @@ jobs:
             if [ "$v" = "$latest" ]; then flag=--latest; else flag=--latest=false; fi
             if gh release view "v$v" >/dev/null 2>&1; then
               echo "v$v is published already: bringing its notes and files up to date"
-              gh release edit "v$v" --title "Tek $v" --notes-file "notes/$v.md" "$flag"
-              gh release upload "v$v" "${files[@]}" --clobber
-            else
-              gh release create "v$v" "${files[@]}" --target "$sha" --title "Tek $v" \
-                --notes-file "notes/$v.md" "$flag"
+              gh release edit "v$v" --title "Tek $v" --notes-file "notes/$v.md" "$flag" >/dev/null
+              have=$(gh release view "v$v" --json assets --jq '.assets[] | "\(.name) \(.size)"')
+              for f in "${files[@]}"; do
+                if ! grep -qxF "$(basename "$f") $(stat -c %s "$f")" <<< "$have"; then
+                  gh release upload "v$v" "$f" --clobber
+                fi
+              done
+              continue
             fi
+            if ! gh api "repos/$GH_REPO/git/ref/tags/v$v" >/dev/null 2>&1; then
+              # The workflow's token may not point a tag at a commit that holds
+              # workflow files, and every source commit from 1.0.1 on does. So
+              # the tag gets a commit of its own with one file naming the source.
+              tree=$(jq -n --arg v "$v" --arg src "$src" '{tree: [{path: "README.md",
+                  mode: "100644", type: "blob",
+                  content: "# Tek \($v)\n\nСобрана из коммита \($src) ветки main. Файлы лежат в релизе v\($v) и в ветке releases, в папке \($v).\n"}]}' |
+                gh api "repos/$GH_REPO/git/trees" --input - --jq .sha)
+              commit=$(gh api "repos/$GH_REPO/git/commits" -f message="Tek $v" -f tree="$tree" --jq .sha)
+              gh api "repos/$GH_REPO/git/refs" -f ref="refs/tags/v$v" -f sha="$commit" >/dev/null
+            fi
+            gh release create "v$v" "${files[@]}" --verify-tag --title "Tek $v" \
+              --notes-file "notes/$v.md" "$flag"
           done < versions.txt
           if [ "$found" = 0 ]; then
             echo "There is no version $WANT in versions.txt on the releases branch"
