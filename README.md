@@ -3,7 +3,15 @@
 VPN-приложение TekVPN для Android, Windows и macOS. Подключается по ссылке
 подписки tekvpn.com. Внутри Xray 26.3.27.
 
-Готовые файлы всех версий с описанием изменений лежат в ветке
+## Скачать Tek 1.1.0
+
+| Система | Файл |
+| --- | --- |
+| Android | [Tek-1.1.0-android.apk](https://github.com/Jojoky7/tek-vpn/raw/releases/1.1.0/Tek-1.1.0-android.apk) |
+| Windows | [установщик](https://github.com/Jojoky7/tek-vpn/raw/releases/1.1.0/Tek-1.1.0-windows-x64-setup.exe) или [без установки, zip](https://github.com/Jojoky7/tek-vpn/raw/releases/1.1.0/Tek-1.1.0-windows-x64-portable.zip) |
+| macOS | [Tek-1.1.0-macos.dmg](https://github.com/Jojoky7/tek-vpn/raw/releases/1.1.0/Tek-1.1.0-macos.dmg) |
+
+Все версии, как установить и что в них менялось: ветка
 [releases](https://github.com/Jojoky7/tek-vpn/tree/releases).
 
 ## Что где
@@ -86,6 +94,7 @@ sudo rm -r "/Library/Application Support/Tek"
 - Иконки: `python3 tool/brand/make_icons.py` рисует их все заново.
 - Выпуск: файлы новой версии кладутся в ветку `releases`, в папку с номером
   версии вместе с SHA256SUMS.txt, и описываются в README этой ветки. Ветка
-  не связана с `main`, поэтому сборки не попадают в код и в CI.
+  не связана с `main`, поэтому сборки не попадают в код и в CI. Ссылки
+  «Скачать» в начале этого README переводятся на новую версию.
 
 Тесты: `flutter test` в `app/`, `go test ./...` в `core/`.
