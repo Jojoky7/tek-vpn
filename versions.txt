@@ -1,0 +1,11 @@
+# Version and the commit it was built from, oldest first. The Releases
+# workflow on main makes release v<version> from the folder <version>/.
+1.0.0 9975b623e6adba9ee744dc63c241a5f23ef48800
+1.0.1 a407b41b0bbc0133afee08c89a10ec8fce14cea6
+1.0.2 36a7678dae59ca11d2c4bd12d192891df3240d39
+1.0.3 564664a0c1c9ccd14be1bff9675aec8f89d68809
+1.0.4 bf0381400e68d1985f898789b6f63f5125d33de4
+1.0.5 14871e6d5a3f44cf38c29947d20af56b23c83713
+1.0.6 eb04d98fde0826c31378a58e9ad29ff940c991e7
+1.0.7 9250ba9018f5bc11abd38ba74b2e1ffc552ac1ec
+1.1.0 0b76f5635195e858b81127bbb4f43df7a607a0db
