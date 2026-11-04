@@ -4,15 +4,15 @@
 подключения нужна ссылка подписки tekvpn.com. Код приложения лежит в ветке
 [main](https://github.com/Jojoky7/tek-vpn/tree/main).
 
-## Последняя версия: 1.1.0
+## Последняя версия: 1.2.0
 
 | Система | Файл |
 | --- | --- |
-| Android | [Tek-1.1.0-android.apk](1.1.0/Tek-1.1.0-android.apk?raw=true) |
-| Windows | [установщик](1.1.0/Tek-1.1.0-windows-x64-setup.exe?raw=true) или [без установки, zip](1.1.0/Tek-1.1.0-windows-x64-portable.zip?raw=true) |
-| macOS | [Tek-1.1.0-macos.dmg](1.1.0/Tek-1.1.0-macos.dmg?raw=true) |
+| Android | [Tek-1.2.0-android.apk](1.2.0/Tek-1.2.0-android.apk?raw=true) |
+| Windows | [установщик](1.2.0/Tek-1.2.0-windows-x64-setup.exe?raw=true) или [без установки, zip](1.2.0/Tek-1.2.0-windows-x64-portable.zip?raw=true) |
+| macOS | [Tek-1.2.0-macos.dmg](1.2.0/Tek-1.2.0-macos.dmg?raw=true) |
 
-Контрольные суммы SHA-256 лежат в [SHA256SUMS.txt](1.1.0/SHA256SUMS.txt) рядом
+Контрольные суммы SHA-256 лежат в [SHA256SUMS.txt](1.2.0/SHA256SUMS.txt) рядом
 с файлами каждой версии.
 
 ## Как установить
@@ -32,6 +32,20 @@
 
 В версиях с 1.0.2 по 1.0.7 менялись только программы для компьютеров,
 поэтому файла для Android в них нет.
+
+### 1.2.0, 4 ноября 2026
+
+[Android](1.2.0/Tek-1.2.0-android.apk?raw=true) ·
+[Windows](1.2.0/Tek-1.2.0-windows-x64-setup.exe?raw=true) ·
+[Windows без установки](1.2.0/Tek-1.2.0-windows-x64-portable.zip?raw=true) ·
+[macOS](1.2.0/Tek-1.2.0-macos.dmg?raw=true) ·
+[суммы](1.2.0/SHA256SUMS.txt) ·
+[код](https://github.com/Jojoky7/tek-vpn/tree/80787dd9ba38e9ba067edcfa9e119832b57694f3)
+
+- Из приложения убраны вход и регистрация по почте. Остались ссылка подписки
+  и QR-код: ссылку берите в личном кабинете на tekvpn.com.
+- Сеанс входа по почте, который хранили прошлые версии, стирается при первом
+  запуске. Уже добавленная подписка остаётся.
 
 ### 1.1.0, 4 ноября 2026
 
