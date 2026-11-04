@@ -139,7 +139,7 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: selected ? TekColors.green.withValues(alpha: 0.10) : Colors.transparent,
+      color: selected ? TekColors.blue.withValues(alpha: 0.10) : Colors.transparent,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -165,7 +165,7 @@ class _Row extends StatelessWidget {
             ?trailing,
             if (selected) ...[
               const SizedBox(width: 8),
-              const Icon(Icons.check_rounded, color: TekColors.green, size: 20),
+              const Icon(Icons.check_rounded, color: TekColors.blue, size: 20),
             ] else
               const SizedBox(width: 28),
           ]),

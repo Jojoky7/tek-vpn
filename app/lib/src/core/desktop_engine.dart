@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import '../services/desktop_apps.dart';
 import '../xray/config_builder.dart';
 import 'elevate.dart';
 import 'engine.dart';
@@ -211,8 +212,13 @@ class DesktopEngine extends TekEngine {
     return null;
   }
 
+  /// One API call. It never waits longer than [timeout], so a stuck core
+  /// cannot hold the app (or quitting it) forever.
   Future<dynamic> _call(_CoreInfo core, String method, String path,
-      [Object? body]) async {
+          [Object? body, Duration timeout = const Duration(seconds: 20)]) =>
+      _send(core, method, path, body).timeout(timeout);
+
+  Future<dynamic> _send(_CoreInfo core, String method, String path, Object? body) async {
     final req = await _http
         .openUrl(method, Uri.parse('http://127.0.0.1:${core.port}$path'))
         .timeout(const Duration(seconds: 5));
@@ -233,10 +239,11 @@ class DesktopEngine extends TekEngine {
 
   /// Calls the core; if it has died, forgets it so the next call starts a
   /// new one.
-  Future<dynamic> _request(String method, String path, [Object? body]) async {
+  Future<dynamic> _request(String method, String path,
+      [Object? body, Duration timeout = const Duration(seconds: 20)]) async {
     final core = await _ensureCore();
     try {
-      return await _call(core, method, path, body);
+      return await _call(core, method, path, body, timeout);
     } on SocketException {
       if (_core == core) _core = null;
       rethrow;
@@ -303,6 +310,7 @@ class DesktopEngine extends TekEngine {
       'config': config,
       'mode': mode == TunnelMode.tun ? 'tun' : 'proxy',
       'assetDir': _assetDir,
+      'appPid': pid,
       if (mode == TunnelMode.proxy)
         'systemProxy': {
           'httpPort': options.httpPort,
@@ -328,7 +336,7 @@ class DesktopEngine extends TekEngine {
         },
     };
     try {
-      final s = await _call(core, 'POST', '/v1/start', body) as Map;
+      final s = await _call(core, 'POST', '/v1/start', body, const Duration(seconds: 60)) as Map;
       _current = EngineStatus(CoreState.stopped, mode: mode);
       _emitFrom(s);
     } on CoreError catch (e) {
@@ -350,7 +358,7 @@ class DesktopEngine extends TekEngine {
     }
     _emit(EngineStatus(CoreState.stopping, mode: _current.mode));
     try {
-      final s = await _call(core, 'POST', '/v1/stop') as Map;
+      final s = await _call(core, 'POST', '/v1/stop', null, const Duration(seconds: 30)) as Map;
       _current = EngineStatus.stopped;
       _emitFrom(s);
     } catch (_) {
@@ -381,7 +389,7 @@ class DesktopEngine extends TekEngine {
       'url': url,
       'timeoutMs': timeoutMs,
       'attempts': attempts,
-    }).timeout(Duration(milliseconds: timeoutMs * attempts * tags.length + 10000));
+    }, Duration(milliseconds: timeoutMs * attempts * tags.length + 10000));
     return [
       for (final r in out as List) PingResult.fromJson(Map<String, dynamic>.from(r as Map))
     ];
@@ -396,7 +404,7 @@ class DesktopEngine extends TekEngine {
       ],
       'timeoutMs': timeoutMs,
       'attempts': attempts,
-    }).timeout(Duration(milliseconds: timeoutMs * attempts * targets.length + 10000));
+    }, Duration(milliseconds: timeoutMs * attempts * targets.length + 10000));
     return [
       for (final r in out as List) PingResult.fromJson(Map<String, dynamic>.from(r as Map))
     ];
@@ -441,13 +449,29 @@ class DesktopEngine extends TekEngine {
     return s['xray']?.toString() ?? '';
   }
 
+  /// Windows: the programs that run now, for the list of apps.
+  Future<List<DesktopApp>> runningApps() async {
+    final out = await _request('GET', '/v1/apps');
+    if (out is! List) return const [];
+    return [
+      for (final a in out.cast<Map<dynamic, dynamic>>())
+        DesktopApp(
+          rule: a['name'].toString(),
+          name: (a['description'] as String?)?.trim().isNotEmpty == true
+              ? a['description'] as String
+              : appLabel(a['name'].toString()).replaceFirst(RegExp(r'\.exe$', caseSensitive: false), ''),
+          detail: a['path'] as String?,
+        )
+    ];
+  }
+
   @override
   Future<void> dispose() async {
     _poll?.cancel();
     final core = _core;
     if (core != null) {
       try {
-        await _call(core, 'POST', '/v1/shutdown');
+        await _call(core, 'POST', '/v1/shutdown', null, const Duration(seconds: 5));
       } catch (_) {}
     }
     _http.close(force: true);

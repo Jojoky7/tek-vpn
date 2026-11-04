@@ -47,6 +47,26 @@ sudo rm /Library/LaunchDaemons/com.tekvpn.core.plist /Library/PrivilegedHelperTo
 sudo rm -r "/Library/Application Support/Tek"
 ```
 
+## Что идёт мимо VPN
+
+- Российские сайты: правило `geosite:category-ru` (все .ru, .su, .рф и
+  российские сервисы на других адресах) и `geoip:ru`. Популярные сервисы
+  (`app/lib/src/xray/ru_sites.dart`) можно отправить через VPN по одному, свои
+  сайты добавить напрямую или через VPN. Сайты «через VPN» стоят в правилах
+  раньше, поэтому перебивают общий список.
+- Приложения. На Android их оставляет вне VPN сама VpnService. На
+  компьютерах это правила Xray по программе (`process`): на Windows по имени
+  (`Telegram.exe`), на macOS по папке приложения
+  (`/Applications/Telegram.app/`). Xray 26.3.27 умеет узнавать программу
+  соединения только на Windows и Linux; для macOS `tek-core` собирается с
+  копией Xray, в которую добавлен `core/_xray/common/net/find_process_darwin.go`
+  (поиск по `net.inet.*.pcblist_n`, код в `core/darwinproc`). Копию готовит
+  `core/_xray/workspace.sh`.
+
+Настройки для разработчиков (фрагментация, блокировка QUIC, подробный журнал,
+журнал) спрятаны: раздел появляется после пяти нажатий на версию в
+настройках.
+
 ## Сборка
 
 Нужны Flutter 3.47.8, Go 1.26.
@@ -57,6 +77,9 @@ sudo rm -r "/Library/Application Support/Tek"
   нет и не должно быть.
 - Windows и macOS: GitHub Actions, workflow **Desktop**. Запуск вручную
   (Actions → Desktop → Run workflow) кладёт файлы в артефакты сборки. Тег
-  `v1.2.3` дополнительно публикует их в Releases.
+  `v1.2.3` дополнительно публикует их в Releases. `tek-core` для macOS
+  вручную: `GOWORK="$(_xray/workspace.sh)" GOOS=darwin go build ./cmd/tek-core`
+  в `core/`.
+- Иконки: `python3 tool/brand/make_icons.py` рисует их все заново.
 
 Тесты: `flutter test` в `app/`, `go test ./...` в `core/`.

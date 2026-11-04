@@ -153,5 +153,9 @@ abstract class TekEngine {
 
   bool get elevated => true;
 
+  /// Android 13 and later: asks the system to put the Tek button into the
+  /// quick settings. added, already, declined, unsupported or error.
+  Future<String> requestTile() async => 'unsupported';
+
   Future<void> dispose();
 }

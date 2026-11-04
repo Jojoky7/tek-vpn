@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Tek's look: calm neutrals and one green that means "protected".
+/// Tek's look: calm neutrals and one blue, the color of the button when
+/// the VPN is on. Green only says that a server works.
 class TekColors {
+  static const blue = Color(0xFF2F80ED);
+  static const blueDark = Color(0xFF1A62D6);
   static const green = Color(0xFF19C37D);
-  static const greenDark = Color(0xFF0E9F63);
   static const amber = Color(0xFFF5A524);
   static const red = Color(0xFFF04D4D);
   static const grey = Color(0xFF9AA3AF);
@@ -19,9 +21,9 @@ ThemeData tekTheme(Brightness brightness) {
 
   final scheme = ColorScheme(
     brightness: brightness,
-    primary: TekColors.green,
+    primary: TekColors.blue,
     onPrimary: Colors.white,
-    secondary: TekColors.green,
+    secondary: TekColors.blue,
     onSecondary: Colors.white,
     error: TekColors.red,
     onError: Colors.white,
@@ -69,11 +71,11 @@ ThemeData tekTheme(Brightness brightness) {
       thumbColor: WidgetStateProperty.resolveWith(
           (s) => s.contains(WidgetState.selected) ? Colors.white : null),
       trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? TekColors.green : null),
+          (s) => s.contains(WidgetState.selected) ? TekColors.blue : null),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: TekColors.green,
+        backgroundColor: TekColors.blue,
         foregroundColor: Colors.white,
         minimumSize: const Size.fromHeight(52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -103,7 +105,7 @@ ThemeData tekTheme(Brightness brightness) {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: TekColors.green, width: 1.5),
+        borderSide: const BorderSide(color: TekColors.blue, width: 1.5),
       ),
     ),
     snackBarTheme: SnackBarThemeData(

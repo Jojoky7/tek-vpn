@@ -61,6 +61,71 @@ void main() {
     expect(outboundByTag(c, 'srv-2')['streamSettings']['sockopt']['domainStrategy'], 'UseIPv4');
   });
 
+  test('apps that go around the VPN, and sites by hand', () {
+    final list = servers();
+    final b = XrayConfigBuilder(list);
+    const opts = ConnectOptions(
+      mode: TunnelMode.tun,
+      appsMode: 'except',
+      apps: ['Telegram', '/Applications/Safari.app/'],
+      directDomains: ['domain:mybank.com'],
+      proxyDomains: ['domain:kinopoisk.ru'],
+    );
+    final c = b.connection(list.first, opts);
+    final rules = (c['routing']['rules'] as List).cast<Map<String, dynamic>>();
+    int at(bool Function(Map<String, dynamic>) f) => rules.indexWhere(f);
+    final apps = at((r) => r['process'] != null);
+    final vpn = at((r) => (r['domain'] as List?)?.contains('domain:kinopoisk.ru') == true);
+    final mine = at((r) => (r['domain'] as List?)?.contains('domain:mybank.com') == true);
+    final ru = at((r) => (r['domain'] as List?)?.contains('geosite:category-ru') == true);
+    expect(rules[apps]['outboundTag'], 'direct');
+    expect(rules[apps]['process'], ['Telegram', '/Applications/Safari.app/']);
+    // DNS goes first, then the apps; a site sent through the VPN wins over
+    // the Russian list.
+    expect(at((r) => r['port'] == '53'), lessThan(apps));
+    expect(apps, lessThan(vpn));
+    expect(rules[vpn]['outboundTag'], 'proxy');
+    expect(vpn, lessThan(mine));
+    expect(rules[mine]['outboundTag'], 'direct');
+    expect(mine, lessThan(ru));
+    expect(rules.last['outboundTag'], 'proxy');
+    expect(rules.last.containsKey('process'), isFalse);
+
+    final dns = (c['dns']['servers'] as List).cast<Map<String, dynamic>>();
+    expect(dns.first['tag'], 'dns-proxy');
+    expect(dns.first['domains'], ['domain:kinopoisk.ru']);
+    expect(dns[1]['address'], '77.88.8.8');
+    expect(dns[1]['domains'], containsAll(['domain:mybank.com', 'geosite:category-ru']));
+  });
+
+  test('only some apps use the VPN', () {
+    final list = servers();
+    final c = XrayConfigBuilder(list).connection(
+        list.first,
+        const ConnectOptions(
+            mode: TunnelMode.proxy,
+            appsMode: 'only',
+            apps: ['chrome'],
+            proxyDomains: ['domain:ozon.ru']));
+    final rules = (c['routing']['rules'] as List).cast<Map<String, dynamic>>();
+    final last = rules[rules.length - 1], proxy = rules[rules.length - 2];
+    expect(proxy, {'network': 'tcp,udp', 'outboundTag': 'proxy', 'process': ['chrome']});
+    expect(last, {'network': 'tcp,udp', 'outboundTag': 'direct'});
+    final quic = rules.firstWhere((r) => r['port'] == '443');
+    expect(quic['process'], ['chrome']);
+    final vpn = rules.firstWhere((r) => (r['domain'] as List?)?.contains('domain:ozon.ru') == true);
+    expect(vpn['process'], ['chrome']);
+  });
+
+  test('no apps chosen means every app uses the VPN', () {
+    final list = servers();
+    final c = XrayConfigBuilder(list).connection(
+        list.first, const ConnectOptions(mode: TunnelMode.tun, appsMode: 'only'));
+    final rules = (c['routing']['rules'] as List).cast<Map<String, dynamic>>();
+    expect(rules.any((r) => r.containsKey('process')), isFalse);
+    expect(rules.last['outboundTag'], 'proxy');
+  });
+
   test('writes configs for the core to check', () async {
     final out = Platform.environment['TEK_CONFIG_OUT'];
     if (out == null) return;
@@ -75,6 +140,21 @@ void main() {
           const ConnectOptions(mode: TunnelMode.proxy, socksPort: 10818, httpPort: 10819),
           api: const ApiProxy(10820, 'tek', 'secret')),
       'probe.json': b.probe(const ConnectOptions(mode: TunnelMode.proxy)),
+      'apps-except.json': b.connection(
+          list.first,
+          const ConnectOptions(
+              mode: TunnelMode.tun,
+              appsMode: 'except',
+              apps: ['Telegram', '/Applications/Telegram.app/'],
+              directDomains: ['domain:mybank.com'],
+              proxyDomains: ['domain:kinopoisk.ru', 'full:www.ozon.ru'])),
+      'apps-only.json': b.connection(
+          list.first,
+          const ConnectOptions(
+              mode: TunnelMode.proxy,
+              appsMode: 'only',
+              apps: ['chrome'],
+              proxyDomains: ['domain:kinopoisk.ru'])),
     };
     for (final e in files.entries) {
       await File('$out/${e.key}').writeAsString(enc.convert(e.value));

@@ -7,11 +7,13 @@ import 'package:flutter/foundation.dart';
 import '../core/engine.dart';
 import '../model/server.dart';
 import '../model/subscription.dart';
+import '../services/desktop_apps.dart';
 import '../services/settings.dart';
 import '../services/storage.dart';
 import '../services/subscription_service.dart';
 import '../services/tek_api.dart';
 import '../xray/config_builder.dart';
+import '../xray/ru_sites.dart';
 
 enum ConnState { disconnected, connecting, connected, disconnecting }
 
@@ -355,15 +357,38 @@ class AppState extends ChangeNotifier {
 
   ServerNode? currentServerFor(String? id) => id == null ? bestServer() : _byId(id);
 
-  ConnectOptions _options({int socksPort = 10808, int httpPort = 10809}) => ConnectOptions(
-        mode: isAndroid ? TunnelMode.tun : settings.desktopMode,
-        ruDirect: settings.ruDirect,
-        fragmentation: settings.fragmentation,
-        blockQuic: settings.blockQuic,
-        logLevel: settings.verboseLog ? 'debug' : 'warning',
-        socksPort: socksPort,
-        httpPort: httpPort,
-      );
+  ConnectOptions _options({int socksPort = 10808, int httpPort = 10809}) {
+    final st = settings;
+    final off = st.ruServicesOff.toSet();
+    return ConnectOptions(
+      mode: isAndroid ? TunnelMode.tun : st.desktopMode,
+      ruDirect: st.ruDirect,
+      directDomains: {
+        ...st.directSites,
+        if (st.ruDirect)
+          for (final r in ruServices)
+            if (!off.contains(r.id)) ...r.rules,
+      }.toList(),
+      proxyDomains: {
+        ...st.vpnSites,
+        if (st.ruDirect)
+          for (final r in ruServices)
+            if (off.contains(r.id)) ...r.rules,
+      }.toList(),
+      // Android leaves the apps out in the VPN service itself.
+      appsMode: isAndroid ? 'off' : st.perAppMode,
+      apps: isAndroid
+          ? const []
+          : Platform.isWindows
+              ? windowsAppRules(st.perAppPackages)
+              : st.perAppPackages,
+      fragmentation: st.fragmentation,
+      blockQuic: st.blockQuic,
+      logLevel: st.verboseLog ? 'debug' : 'warning',
+      socksPort: socksPort,
+      httpPort: httpPort,
+    );
+  }
 
   XrayConfigBuilder _builder() => XrayConfigBuilder(servers,
       subscriptionFragment: subscription?.info.fragment);
@@ -469,6 +494,12 @@ class AppState extends ChangeNotifier {
       connectedSince = s.since ?? DateTime.now();
       _lastTraffic = null;
       _startHealth();
+      if (isAndroid && !storage.tileOffered) {
+        // After the first connection: offer the button in the quick
+        // settings, so the VPN can be switched on from there.
+        await storage.setTileOffered();
+        unawaited(engine.requestTile());
+      }
       if (checks.values.any((c) => c.at == null) ||
           servers.any((x) => checks[x.id]?.at == null)) {
         unawaited(checkServers());
@@ -613,6 +644,9 @@ class AppState extends ChangeNotifier {
     }
     notifyListeners();
     final needsReconnect = old.ruDirect != s.ruDirect ||
+        !listEquals(old.ruServicesOff, s.ruServicesOff) ||
+        !listEquals(old.directSites, s.directSites) ||
+        !listEquals(old.vpnSites, s.vpnSites) ||
         old.fragmentation != s.fragmentation ||
         old.blockQuic != s.blockQuic ||
         old.desktopMode != s.desktopMode ||

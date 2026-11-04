@@ -22,22 +22,30 @@ Future<bool> claimSingleInstance(List<String> args, void Function(List<String>) 
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, _instancePort);
     server.listen((socket) {
       utf8.decoder.bind(socket).join().then((text) {
+        // The answer tells the new launch that this Tek is alive.
+        socket.write('ok');
+        socket.close().catchError((_) => socket);
         try {
           onMessage([for (final a in jsonDecode(text) as List) a.toString()]);
         } catch (_) {}
-      });
+      }, onError: (_) => socket.destroy());
     });
     return true;
   } on SocketException {
+    Socket? socket;
     try {
-      final socket = await Socket.connect(InternetAddress.loopbackIPv4, _instancePort,
+      socket = await Socket.connect(InternetAddress.loopbackIPv4, _instancePort,
           timeout: const Duration(seconds: 2));
       socket.write(jsonEncode(args));
       await socket.flush();
+      final answer = socket.first;
       await socket.close();
+      await answer.timeout(const Duration(seconds: 3));
       return false;
     } catch (_) {
-      // Something else took the port; run anyway.
+      // Something else holds the port, or a Tek that hangs and would
+      // never show its window: run anyway.
+      socket?.destroy();
       return true;
     }
   }
@@ -110,8 +118,12 @@ class DesktopShell with WindowListener, TrayListener {
     if (_quitting) return;
     _quitting = true;
     try {
-      if (app.conn != ConnState.disconnected) await app.disconnect();
-      await app.engine.dispose();
+      // A core that does not answer must not keep Tek from quitting.
+      if (app.conn != ConnState.disconnected) {
+        await app.disconnect().timeout(const Duration(seconds: 15), onTimeout: () {});
+      }
+      await app.engine.dispose().timeout(const Duration(seconds: 6), onTimeout: () {});
+    } catch (_) {
     } finally {
       await trayManager.destroy();
       await windowManager.setPreventClose(false);

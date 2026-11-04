@@ -164,7 +164,7 @@ class TekVpnService : VpnService() {
             .setWhen(System.currentTimeMillis())
             .setContentIntent(openAppIntent())
             .addAction(Notification.Action.Builder(null, getString(R.string.disconnect), stop).build())
-            .setColor(0xFF19C37D.toInt())
+            .setColor(0xFF2F80ED.toInt())
             .build()
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)

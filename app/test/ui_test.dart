@@ -21,7 +21,10 @@ import 'package:tek/src/services/subscription_service.dart';
 import 'package:tek/src/services/tek_api.dart';
 import 'package:tek/src/state/app_state.dart';
 import 'package:tek/src/ui/add_subscription_screen.dart';
+import 'package:tek/src/ui/apps_screen.dart';
+import 'package:tek/src/ui/developer_screen.dart';
 import 'package:tek/src/ui/login_screen.dart';
+import 'package:tek/src/ui/ru_sites_screen.dart';
 import 'package:tek/src/ui/settings_screen.dart';
 import 'package:tek/src/ui/strings.dart';
 import 'package:tek/src/ui/widgets.dart';
@@ -263,6 +266,31 @@ void main() {
       await _settle(tester);
       await _save(tester, 'phone-$theme-7-settings');
 
+      // Five taps on the version open the settings for developers.
+      expect(find.text(S.current.developer), findsNothing);
+      for (var i = 0; i < 5; i++) {
+        await tester.tap(find.textContaining('Tek 1.0.0'));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await _settle(tester);
+      expect(app.settings.developer, isTrue);
+      expect(find.byType(DeveloperScreen), findsOneWidget);
+      await _save(tester, 'phone-$theme-8-developer');
+
+      await tester.pumpWidget(Container());
+      await tester.pumpWidget(_wrap(app, screen: const RuSitesScreen()));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+      await _settle(tester);
+      expect(find.text('Госуслуги'), findsOneWidget);
+      await _save(tester, 'phone-$theme-9-ru-sites');
+
+      await tester.pumpWidget(Container());
+      await tester.pumpWidget(_wrap(app, screen: const AppsScreen()));
+      await _settle(tester);
+      await tester.tap(find.text(S.current.appsExcept));
+      await _settle(tester);
+      await _save(tester, 'phone-$theme-10-apps');
+
       await tester.runAsync(() => app.disconnect());
       await tester.pumpWidget(Container());
       app.dispose();
@@ -290,6 +318,16 @@ void main() {
     await tester.pumpWidget(_wrap(app, screen: const SettingsScreen()));
     await _settle(tester);
     await _save(tester, 'desktop-2-settings');
+
+    // A wave goes out on every press and is gone a moment later.
+    await tester.pumpWidget(_wrap(app));
+    await _settle(tester);
+    await tester.tap(find.byType(PowerButton));
+    await tester.pump(const Duration(milliseconds: 500));
+    await _save(tester, 'desktop-3-wave');
+    await _settle(tester);
+    await _settle(tester);
+    expect(app.conn, ConnState.disconnected);
 
     await tester.runAsync(() => app.disconnect());
     await tester.pumpWidget(Container());

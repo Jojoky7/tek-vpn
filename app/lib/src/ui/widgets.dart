@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:circle_flags/circle_flags.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../services/storage.dart';
 import '../state/app_state.dart';
@@ -17,7 +18,10 @@ String pingText(CheckResult? check) {
   return ms == null ? '' : S.current.ms(ms);
 }
 
-/// The round button in the middle of the main screen.
+/// The round button in the middle of the main screen. Every press sends a
+/// few rings across the screen, like a touch on calm water. They are
+/// plain circles drawn by one ticker that stops when the last ring is gone,
+/// so weak devices do not notice them.
 class PowerButton extends StatefulWidget {
   const PowerButton({super.key, required this.state, required this.onTap, this.size = 176});
 
@@ -29,9 +33,12 @@ class PowerButton extends StatefulWidget {
   State<PowerButton> createState() => _PowerButtonState();
 }
 
-class _PowerButtonState extends State<PowerButton> with SingleTickerProviderStateMixin {
+class _PowerButtonState extends State<PowerButton> with TickerProviderStateMixin {
   late final AnimationController _spin =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+  final _waves = _Waves();
+  late final Ticker _ticker = createTicker((elapsed) => _waves.tick(elapsed));
+  bool _pressed = false;
 
   bool get _busy =>
       widget.state == ConnState.connecting || widget.state == ConnState.disconnecting;
@@ -40,6 +47,9 @@ class _PowerButtonState extends State<PowerButton> with SingleTickerProviderStat
   void initState() {
     super.initState();
     if (_busy) _spin.repeat();
+    _waves.onIdle = () {
+      if (_ticker.isActive) _ticker.stop();
+    };
   }
 
   @override
@@ -54,8 +64,25 @@ class _PowerButtonState extends State<PowerButton> with SingleTickerProviderStat
 
   @override
   void dispose() {
+    _ticker.dispose();
     _spin.dispose();
+    _waves.dispose();
     super.dispose();
+  }
+
+  void _tap() {
+    if (!(MediaQuery.maybeDisableAnimationsOf(context) ?? false)) {
+      if (!_ticker.isActive) {
+        _waves.reset();
+        _ticker.start();
+      }
+      _waves.touch();
+    }
+    widget.onTap();
+  }
+
+  void _press(bool down) {
+    if (_pressed != down) setState(() => _pressed = down);
   }
 
   @override
@@ -63,23 +90,31 @@ class _PowerButtonState extends State<PowerButton> with SingleTickerProviderStat
     final scheme = Theme.of(context).colorScheme;
     final on = widget.state == ConnState.connected;
     final size = widget.size;
-    final ringColor = on ? TekColors.green : scheme.outline;
+    final ringColor = on ? TekColors.blue : scheme.outline;
     return Semantics(
       button: true,
       label: on ? 'disconnect' : 'connect',
       child: GestureDetector(
-        onTap: widget.onTap,
+        onTap: _tap,
+        onTapDown: (_) => _press(true),
+        onTapUp: (_) => _press(false),
+        onTapCancel: () => _press(false),
         child: SizedBox(
           width: size + 40,
           height: size + 40,
-          child: Stack(alignment: Alignment.center, children: [
+          child: Stack(alignment: Alignment.center, clipBehavior: Clip.none, children: [
+            Positioned.fill(
+              child: RepaintBoundary(
+                child: CustomPaint(painter: _WavePainter(_waves, TekColors.blue, size / 2)),
+              ),
+            ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 400),
               width: size + 40,
               height: size + 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: on ? TekColors.green.withValues(alpha: 0.10) : Colors.transparent,
+                color: on ? TekColors.blue.withValues(alpha: 0.10) : Colors.transparent,
               ),
             ),
             if (_busy)
@@ -89,30 +124,35 @@ class _PowerButtonState extends State<PowerButton> with SingleTickerProviderStat
                   angle: _spin.value * 2 * pi,
                   child: CustomPaint(
                     size: Size.square(size + 14),
-                    painter: _ArcPainter(TekColors.green),
+                    painter: _ArcPainter(TekColors.blue),
                   ),
                 ),
               ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: on ? TekColors.green : scheme.surface,
-                border: Border.all(color: ringColor, width: on ? 0 : 2),
-                boxShadow: [
-                  if (on)
-                    BoxShadow(
-                        color: TekColors.green.withValues(alpha: 0.35),
-                        blurRadius: 32,
-                        spreadRadius: 2),
-                ],
-              ),
-              child: Icon(
-                Icons.power_settings_new_rounded,
-                size: size * 0.38,
-                color: on ? Colors.white : scheme.onSurfaceVariant,
+            AnimatedScale(
+              scale: _pressed ? 0.96 : 1,
+              duration: const Duration(milliseconds: 140),
+              curve: Curves.easeOut,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: on ? TekColors.blue : scheme.surface,
+                  border: Border.all(color: ringColor, width: on ? 0 : 2),
+                  boxShadow: [
+                    if (on)
+                      BoxShadow(
+                          color: TekColors.blue.withValues(alpha: 0.35),
+                          blurRadius: 32,
+                          spreadRadius: 2),
+                  ],
+                ),
+                child: Icon(
+                  Icons.power_settings_new_rounded,
+                  size: size * 0.38,
+                  color: on ? Colors.white : scheme.onSurfaceVariant,
+                ),
               ),
             ),
           ]),
@@ -120,6 +160,66 @@ class _PowerButtonState extends State<PowerButton> with SingleTickerProviderStat
       ),
     );
   }
+}
+
+/// The rings in flight: when each touch happened, on the ticker's clock.
+class _Waves extends ChangeNotifier {
+  static const rings = 3;
+  static const ringGap = 0.28; // seconds between the rings of one touch
+  static const life = 1.8; // seconds one ring takes to fade out
+
+  final List<double> touches = [];
+  double now = 0;
+  VoidCallback? onIdle;
+
+  void reset() {
+    touches.clear();
+    now = 0;
+  }
+
+  void touch() {
+    touches.add(now);
+    if (touches.length > 4) touches.removeAt(0);
+  }
+
+  void tick(Duration elapsed) {
+    now = elapsed.inMicroseconds / 1e6;
+    touches.removeWhere((t) => now - t > life + ringGap * (rings - 1));
+    notifyListeners();
+    if (touches.isEmpty) onIdle?.call();
+  }
+}
+
+class _WavePainter extends CustomPainter {
+  _WavePainter(this.waves, this.color, this.radius) : super(repaint: waves);
+  final _Waves waves;
+  final Color color;
+
+  /// The button's radius: the rings start at its edge.
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (waves.touches.isEmpty) return;
+    final center = size.center(Offset.zero);
+    final paint = Paint()..style = PaintingStyle.stroke;
+    for (final t0 in waves.touches) {
+      for (var k = 0; k < _Waves.rings; k++) {
+        final t = (waves.now - t0 - k * _Waves.ringGap) / _Waves.life;
+        if (t <= 0 || t >= 1) continue;
+        final spread = Curves.easeOutCubic.transform(t);
+        final fade = (1 - t) * (1 - t);
+        paint
+          ..color = color.withValues(alpha: 0.45 * fade * (1 - k * 0.22))
+          ..strokeWidth = 0.8 + 2.4 * (1 - spread);
+        canvas.drawCircle(center, radius + 6 + spread * radius * 1.1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter old) =>
+      old.waves != waves || old.color != color || old.radius != radius;
 }
 
 class _ArcPainter extends CustomPainter {
@@ -176,9 +276,9 @@ class FastestIcon extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: TekColors.green.withValues(alpha: 0.14),
+          color: TekColors.blue.withValues(alpha: 0.14),
         ),
-        child: Icon(Icons.bolt_rounded, size: size * 0.62, color: TekColors.green),
+        child: Icon(Icons.bolt_rounded, size: size * 0.62, color: TekColors.blue),
       );
 }
 
@@ -240,7 +340,7 @@ class TekMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CustomPaint(
         size: Size.square(size),
-        painter: TekMarkPainter(color ?? TekColors.green),
+        painter: TekMarkPainter(color ?? TekColors.blue),
       );
 }
 
@@ -266,4 +366,52 @@ class TekMarkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(TekMarkPainter old) => old.color != color;
+}
+
+/// The small caps title above a card of settings.
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.title, {super.key, this.hint});
+  final String title;
+
+  /// A line under the title that says how the card works.
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 24, 4, 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title.toUpperCase(),
+            style: TextStyle(
+                fontSize: 12, letterSpacing: 0.8, fontWeight: FontWeight.w600, color: muted)),
+        if (hint != null) ...[
+          const SizedBox(height: 4),
+          Text(hint!, style: TextStyle(fontSize: 13, height: 1.3, color: muted)),
+        ],
+      ]),
+    );
+  }
+}
+
+/// A round letter in place of an app icon.
+class LetterIcon extends StatelessWidget {
+  const LetterIcon(this.text, {super.key, this.size = 36});
+  final String text;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final letter = text.isEmpty ? '?' : String.fromCharCode(text.runes.first).toUpperCase();
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.surfaceContainerHighest),
+      child: Text(letter,
+          style: TextStyle(
+              fontSize: size * 0.42, fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
+    );
+  }
 }

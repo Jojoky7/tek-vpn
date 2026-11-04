@@ -6,12 +6,15 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../xray/config_builder.dart';
+import '../state/app_state.dart';
 import 'add_subscription_screen.dart';
 import 'app_scope.dart';
 import 'apps_screen.dart';
-import 'logs_screen.dart';
+import 'developer_screen.dart';
+import 'ru_sites_screen.dart';
 import 'strings.dart';
 import 'theme.dart';
+import 'widgets.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -52,7 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               children: [
-                _Section(s.subscription),
+                SectionTitle(s.subscription),
                 Card(
                   child: Column(children: [
                     if (sub != null) ...[
@@ -106,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ]),
                 ),
-                _Section(s.connection),
+                SectionTitle(s.connection),
                 Card(
                   child: Column(children: [
                     if (!app.isAndroid) ...[
@@ -130,59 +133,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(indent: 16, endIndent: 16),
                     ],
-                    SwitchListTile(
+                    ListTile(
                       title: Text(s.ruDirect),
-                      subtitle: Text(s.ruDirectHint),
-                      value: st.ruDirect,
-                      onChanged: (v) => app.updateSettings(st.copyWith(ruDirect: v)),
-                    ),
-                    if (app.isAndroid) ...[
-                      const Divider(indent: 16, endIndent: 16),
-                      ListTile(
-                        title: Text(s.apps),
-                        subtitle: Text(switch (st.perAppMode) {
-                          'only' => '${s.appsOnly} · ${st.perAppPackages.length}',
-                          'except' => '${s.appsExcept} · ${st.perAppPackages.length}',
-                          _ => s.appsAll,
-                        }),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(builder: (_) => const AppsScreen())),
-                      ),
-                    ],
-                  ]),
-                ),
-                _Section(s.advanced),
-                Card(
-                  child: Column(children: [
-                    SwitchListTile(
-                      title: Text(s.fragmentation),
-                      subtitle: Text(s.fragmentationHint),
-                      value: st.fragmentation,
-                      onChanged: (v) => app.updateSettings(st.copyWith(fragmentation: v)),
-                    ),
-                    const Divider(indent: 16, endIndent: 16),
-                    SwitchListTile(
-                      title: Text(s.blockQuic),
-                      subtitle: Text(s.blockQuicHint),
-                      value: st.blockQuic,
-                      onChanged: (v) => app.updateSettings(st.copyWith(blockQuic: v)),
-                    ),
-                    const Divider(indent: 16, endIndent: 16),
-                    SwitchListTile(
-                      title: Text(s.verboseLog),
-                      value: st.verboseLog,
-                      onChanged: (v) => app.updateSettings(st.copyWith(verboseLog: v)),
+                      subtitle: Text(st.ruDirect ? s.ruDirectHint : s.ruSitesOff),
+                      onTap: () => Navigator.of(context)
+                          .push(MaterialPageRoute<void>(builder: (_) => const RuSitesScreen())),
+                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Switch(
+                          value: st.ruDirect,
+                          onChanged: (v) => app.updateSettings(st.copyWith(ruDirect: v)),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right_rounded),
+                      ]),
                     ),
                     const Divider(indent: 16, endIndent: 16),
                     ListTile(
-                      title: Text(s.logs),
+                      title: Text(s.apps),
+                      subtitle: Text(switch (st.perAppMode) {
+                        'only' when st.perAppPackages.isNotEmpty =>
+                          '${s.appsOnly} · ${st.perAppPackages.length}',
+                        'except' when st.perAppPackages.isNotEmpty =>
+                          '${s.appsExcept} · ${st.perAppPackages.length}',
+                        _ => s.appsAll,
+                      }),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => Navigator.of(context)
-                          .push(MaterialPageRoute<void>(builder: (_) => const LogsScreen())),
+                          .push(MaterialPageRoute<void>(builder: (_) => const AppsScreen())),
                     ),
-                    const Divider(indent: 16, endIndent: 16),
+                  ]),
+                ),
+                SectionTitle(s.appSection),
+                Card(
+                  child: Column(children: [
+                    if (app.isAndroid) ...[
+                      ListTile(
+                        leading: const Icon(Icons.dashboard_customize_outlined),
+                        title: Text(s.quickTile),
+                        subtitle: Text(s.quickTileHint),
+                        onTap: () => _addTile(app),
+                      ),
+                      const Divider(indent: 16, endIndent: 16),
+                    ],
                     ListTile(
+                      leading: const Icon(Icons.translate_rounded),
                       title: Text(s.language),
                       trailing: DropdownButton<String>(
                         value: st.language,
@@ -201,12 +195,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ]),
                 ),
-                _Section(s.about),
+                SectionTitle(s.about),
                 Card(
                   child: Column(children: [
                     ListTile(
                       title: Text('Tek $_version'),
                       subtitle: Text('Xray-core $_xray · ${Platform.operatingSystem}'),
+                      onTap: () => _versionTapped(app),
                     ),
                     if (sub?.info.supportUrl != null) ...[
                       const Divider(indent: 16, endIndent: 16),
@@ -215,6 +210,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         trailing: const Icon(Icons.open_in_new_rounded, size: 20),
                         onTap: () => launchUrl(Uri.parse(sub!.info.supportUrl!),
                             mode: LaunchMode.externalApplication),
+                      ),
+                    ],
+                    if (st.developer) ...[
+                      const Divider(indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.code_rounded),
+                        title: Text(s.developer),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: _openDeveloper,
                       ),
                     ],
                   ]),
@@ -229,6 +233,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  int _taps = 0;
+
+  void _openDeveloper() => Navigator.of(context)
+      .push(MaterialPageRoute<void>(builder: (_) => const DeveloperScreen()));
+
+  /// Five taps on the version open the settings for developers, the way
+  /// Android hides its own.
+  void _versionTapped(AppState app) {
+    final s = S.current;
+    final messenger = ScaffoldMessenger.of(context);
+    if (app.settings.developer) {
+      _openDeveloper();
+      return;
+    }
+    _taps++;
+    messenger.hideCurrentSnackBar();
+    if (_taps >= 5) {
+      _taps = 0;
+      app.updateSettings(app.settings.copyWith(developer: true));
+      messenger.showSnackBar(SnackBar(content: Text(s.developerOn)));
+      _openDeveloper();
+    } else if (_taps >= 2) {
+      messenger.showSnackBar(SnackBar(
+          content: Text(s.developerTaps(5 - _taps)), duration: const Duration(seconds: 1)));
+    }
+  }
+
+  Future<void> _addTile(AppState app) async {
+    final s = S.current;
+    final result = await app.engine.requestTile();
+    if (!mounted) return;
+    switch (result) {
+      case 'added' || 'already':
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result == 'added' ? s.tileAdded : s.tileAlready)));
+      case 'declined':
+        break;
+      default:
+        // Before Android 13 the button can only be dragged in by hand.
+        await showDialog<void>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text(s.quickTile),
+            content: Text(s.tileManual),
+            actions: [TextButton(onPressed: () => Navigator.pop(c), child: Text(s.ok))],
+          ),
+        );
+    }
   }
 
   Future<void> _confirmRemove(BuildContext context) async {
@@ -248,20 +302,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (yes == true && context.mounted) await AppScope.read(context).removeSubscription();
   }
-}
-
-class _Section extends StatelessWidget {
-  const _Section(this.title);
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 24, 4, 8),
-        child: Text(title.toUpperCase(),
-            style: TextStyle(
-                fontSize: 12,
-                letterSpacing: 0.8,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
-      );
 }

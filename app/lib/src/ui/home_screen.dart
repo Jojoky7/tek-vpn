@@ -122,7 +122,7 @@ class _Status extends StatelessWidget {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     final (label, color) = switch (app.conn) {
-      ConnState.connected => (s.connected, TekColors.green),
+      ConnState.connected => (s.connected, TekColors.blue),
       ConnState.connecting => (s.connecting, theme.colorScheme.onSurface),
       ConnState.disconnecting => (s.disconnecting, theme.colorScheme.onSurface),
       ConnState.disconnected => (s.disconnected, theme.colorScheme.onSurface),
@@ -283,7 +283,7 @@ class _SubscriptionCard extends StatelessWidget {
                 value: progress.clamp(0.0, 1.0),
                 minHeight: 6,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                color: progress > 0.9 ? TekColors.amber : TekColors.green,
+                color: progress > 0.9 ? TekColors.amber : TekColors.blue,
               ),
             ),
           ],

@@ -190,6 +190,17 @@ class AndroidEngine extends TekEngine {
   }
 
   @override
+  Future<String> requestTile() async {
+    try {
+      return await _method.invokeMethod<String>('requestTile') ?? 'error';
+    } on PlatformException {
+      return 'error';
+    } on MissingPluginException {
+      return 'unsupported';
+    }
+  }
+
+  @override
   Future<void> dispose() async {
     await _sub?.cancel();
     await _status.close();

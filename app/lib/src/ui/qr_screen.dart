@@ -50,7 +50,7 @@ class _QrScreenState extends State<QrScreen> {
             width: 240,
             height: 240,
             decoration: BoxDecoration(
-              border: Border.all(color: TekColors.green, width: 3),
+              border: Border.all(color: TekColors.blue, width: 3),
               borderRadius: BorderRadius.circular(24),
             ),
           ),

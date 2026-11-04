@@ -33,12 +33,30 @@ class ConnectOptions {
     this.httpPort = 10809,
     this.logLevel = 'warning',
     this.geoFiles = true,
+    this.directDomains = const [],
+    this.proxyDomains = const [],
+    this.appsMode = 'off',
+    this.apps = const [],
   });
 
   final TunnelMode mode;
 
   /// Russian sites and addresses go around the VPN.
   final bool ruDirect;
+
+  /// Domain rules that always go around the VPN.
+  final List<String> directDomains;
+
+  /// Domain rules that always go through the VPN, even when the Russian
+  /// list or [directDomains] has them.
+  final List<String> proxyDomains;
+
+  /// Computers: off, only (only [apps] use the VPN) or except ([apps] go
+  /// around it). [apps] are Xray process rules: a program name
+  /// (Telegram.exe) or a folder (/Applications/Telegram.app/). Android does
+  /// this in the VPN service instead.
+  final String appsMode;
+  final List<String> apps;
 
   /// Cut the first packet to servers into pieces (helps where providers
   /// drop VPN handshakes).
@@ -186,6 +204,11 @@ class XrayConfigBuilder {
 
     final ruDomains =
         o.geoFiles ? const ['geosite:category-ru'] : _ruFallbackDomains;
+    final apps = o.apps.isEmpty ? 'off' : o.appsMode;
+    // Rules for the apps that use the VPN: in "only" mode the others go
+    // straight out and nothing else applies to them.
+    Map<String, dynamic> forApps(Map<String, dynamic> rule) =>
+        apps == 'only' ? {...rule, 'process': o.apps} : rule;
     final rules = <Map<String, dynamic>>[
       if (api != null) {'inboundTag': ['api-in'], 'outboundTag': proxyTag},
       {
@@ -208,16 +231,23 @@ class XrayConfigBuilder {
         // The servers are reached over IPv4; IPv6 is closed fast so that
         // apps switch to IPv4 instead of leaking or hanging.
         {'ip': ['::/0'], 'outboundTag': 'block'},
+      if (apps == 'except')
+        {'process': o.apps, 'network': 'tcp,udp', 'outboundTag': 'direct'},
+      if (o.proxyDomains.isNotEmpty)
+        forApps({'domain': o.proxyDomains, 'outboundTag': proxyTag}),
+      if (o.directDomains.isNotEmpty) {'domain': o.directDomains, 'outboundTag': 'direct'},
       if (o.ruDirect) {'domain': ruDomains, 'outboundTag': 'direct'},
       if (o.ruDirect && o.geoFiles) {'ip': ['geoip:ru'], 'outboundTag': 'direct'},
       if (o.blockQuic)
-        {'network': 'udp', 'port': '443', 'outboundTag': 'block'},
-      {'network': 'tcp,udp', 'outboundTag': proxyTag},
+        forApps({'network': 'udp', 'port': '443', 'outboundTag': 'block'}),
+      forApps({'network': 'tcp,udp', 'outboundTag': proxyTag}),
+      if (apps == 'only') {'network': 'tcp,udp', 'outboundTag': 'direct'},
     ];
 
     return {
       'log': {'loglevel': o.logLevel},
-      'dns': _dns(o.ruDirect ? ruDomains : const []),
+      'dns': _dns([...o.directDomains, if (o.ruDirect) ...ruDomains],
+          proxyDomains: o.proxyDomains),
       'inbounds': inbounds,
       'outbounds': outbounds,
       'routing': {'domainStrategy': 'AsIs', 'rules': rules},
@@ -265,7 +295,8 @@ class XrayConfigBuilder {
           {'tag': 'srv-$i', 'host': servers[i].host, 'port': servers[i].port}
       ];
 
-  Map<String, dynamic> _dns(List<String> directDomains) {
+  Map<String, dynamic> _dns(List<String> directDomains,
+      {List<String> proxyDomains = const []}) {
     final serverDomains = {
       for (final s in servers)
         if (InternetAddress.tryParse(s.host) == null) 'full:${s.host}'
@@ -275,6 +306,10 @@ class XrayConfigBuilder {
       'tag': 'dns-internal',
       'queryStrategy': 'UseIPv4',
       'servers': [
+        // Sites that go through the VPN are looked up through it too, even
+        // when the direct server's list (such as all of .ru) has them.
+        if (proxyDomains.isNotEmpty)
+          {'address': _dnsProxy.first, 'tag': 'dns-proxy', 'domains': proxyDomains},
         if (direct.isNotEmpty)
           {
             'address': _dnsDirect,

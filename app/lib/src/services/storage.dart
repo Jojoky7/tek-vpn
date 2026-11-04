@@ -46,10 +46,16 @@ class Storage {
   static const _kChecks = 'checks';
   static const _kAccount = 'account';
   static const _kTrayHint = 'trayHintShown';
+  static const _kTileOffered = 'tileOffered';
 
   bool get trayHintShown => _prefs.getBool(_kTrayHint) ?? false;
 
   Future<void> setTrayHintShown() => _prefs.setBool(_kTrayHint, true);
+
+  /// Android: the system was asked once to add the quick settings button.
+  bool get tileOffered => _prefs.getBool(_kTileOffered) ?? false;
+
+  Future<void> setTileOffered() => _prefs.setBool(_kTileOffered, true);
 
   Subscription? get subscription {
     final raw = _prefs.getString(_kSubscription);

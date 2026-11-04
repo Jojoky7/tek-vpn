@@ -103,15 +103,105 @@ class S {
   String get appsExcept => t('Все, кроме выбранных', 'All except selected');
   String get search => t('Поиск', 'Search');
   String selectedCount(int n) => t('Выбрано: $n', 'Selected: $n');
-  String get advanced => t('Дополнительно', 'Advanced');
+  String get appSection => t('Приложение', 'App');
+  String get developer => t('Для разработчиков', 'For developers');
+  String get developerHint => t(
+      'Эти настройки нужны, только когда что-то не работает. Меняйте их, если понимаете, зачем.',
+      'These settings only matter when something does not work. Change them if you know why.');
+  String get developerOn => t('Раздел «Для разработчиков» открыт', 'The developer settings are open');
+  String developerTaps(int n) => ru
+      ? 'Ещё ${_plural(n, 'нажатие', 'нажатия', 'нажатий')}, и откроется раздел для разработчиков'
+      : '$n more tap${n == 1 ? '' : 's'} to open the developer settings';
+  String get developerHide => t('Скрыть раздел', 'Hide this section');
   String get fragmentation => t('Фрагментация', 'Fragmentation');
-  String get fragmentationHint =>
-      t('Помогает, если провайдер мешает подключению', 'Helps when the provider blocks VPN');
+  String get fragmentationHint => t(
+      'Первый пакет соединения с сервером Tek режет на кусочки. Некоторые провайдеры по этому '
+          'пакету узнают VPN и рвут соединение, а по кусочкам узнать не могут. Включена сразу; '
+          'выключайте, только если без неё работает лучше.',
+      'Tek cuts the first packet it sends to the server into pieces. Some providers recognize '
+          'a VPN by that packet and drop the connection; they cannot do it with the pieces. On by '
+          'default; turn it off only if things work better without it.');
   String get blockQuic => t('Блокировать QUIC', 'Block QUIC');
-  String get blockQuicHint =>
-      t('Сайты быстрее открываются через VPN', 'Sites load faster through the VPN');
+  String get blockQuicHint => t(
+      'QUIC — быстрый протокол поверх UDP, им пользуются YouTube, Google и другие. Через VPN он '
+          'часто тормозит или не работает совсем. Когда он заблокирован, браузер сразу берёт '
+          'обычное соединение, и сайты открываются быстрее.',
+      'QUIC is a fast protocol over UDP used by YouTube, Google and others. Through a VPN it is '
+          'often slow or does not work at all. When it is blocked, the browser takes a normal '
+          'connection at once and sites open faster.');
   String get verboseLog => t('Подробный журнал', 'Detailed log');
+  String get verboseLogHint => t(
+      'В журнал попадает каждое соединение: куда, через какой сервер и что пошло не так. '
+          'Помогает найти причину проблемы. Tek с ним работает медленнее, поэтому выключите '
+          'после проверки.',
+      'Every connection goes into the log: where it went, through which server and what went '
+          'wrong. It helps find the cause of a problem. Tek is slower with it, so turn it off '
+          'when you are done.');
   String get logs => t('Журнал', 'Log');
+  String get logsHint => t('Что делал Tek. Журнал можно скопировать и отправить в поддержку.',
+      'What Tek did. You can copy the log and send it to support.');
+
+  String get ruSites => t('Российские сайты', 'Russian sites');
+  String get ruSitesHint => t(
+      'Эти сайты открываются напрямую, без VPN: так они работают быстрее, а банки и Госуслуги '
+          'не просят выключить VPN. Сюда входят все сайты в зонах .ru, .su и .рф, российские '
+          'сервисы на других адресах и российские IP-адреса.',
+      'These sites open directly, without the VPN: they work faster, and banks and Gosuslugi do '
+          'not ask you to turn the VPN off. This covers every site in the .ru, .su and .рф zones, '
+          'Russian services elsewhere and Russian IP addresses.');
+  String get ruSitesOff =>
+      t('Сейчас все сайты идут через VPN.', 'All sites go through the VPN now.');
+  String get popularServices => t('Популярные сервисы', 'Popular services');
+  String get popularHint =>
+      t('Выключите сервис, чтобы он шёл через VPN.', 'Turn a service off to send it through the VPN.');
+  String get mySites => t('Свои сайты', 'Your sites');
+  String get mySitesHint => t('Работают всегда, вместе со всеми поддоменами.',
+      'They always apply, with all their subdomains.');
+  String get addSite => t('Добавить сайт', 'Add a site');
+  String get siteDirect => t('Напрямую', 'Directly');
+  String get siteVpn => t('Через VPN', 'Through the VPN');
+  String get badSite => t('Это не похоже на адрес сайта', 'This does not look like a site address');
+  String get fullList => t('Весь список', 'Full list');
+  String fullListCount(int n) => ru
+      ? 'Все сайты .ru, .su, .рф и ещё ${_plural(n, 'сайт', 'сайта', 'сайтов')}'
+      : 'All .ru, .su and .рф sites and $n more';
+  String get fullListHint =>
+      t('Снимите галочку, чтобы сайт шёл через VPN.', 'Uncheck a site to send it through the VPN.');
+  String get nothingFound => t('Ничего не найдено', 'Nothing found');
+
+  String get appsHintOnly => t('Через VPN идут только отмеченные программы, остальные напрямую.',
+      'Only the checked apps use the VPN; the others go directly.');
+  String get appsHintExcept => t('Отмеченные программы идут напрямую, остальные через VPN.',
+      'The checked apps go directly; the others use the VPN.');
+  String get addApp => t('Добавить программу', 'Add an app');
+  String get appNameHintWindows => t('Например, Telegram.exe', 'For example, Telegram.exe');
+  String get appNameHintMac => t('Например, /Applications/Telegram.app', 'For example, /Applications/Telegram.app');
+  String get badApp => t('Нужно имя программы, например Telegram.exe',
+      'Type the program name, for example Telegram.exe');
+  String get appsRunning => t('Запущенные программы', 'Running apps');
+  String get appsRunningHint => t('Здесь программы, которые запущены сейчас. Если нужной нет, запустите её или добавьте по имени.',
+      'These are the apps that run now. If yours is missing, start it or add it by name.');
+  String get appsInstalled => t('Программы', 'Apps');
+  String get appsChosen => t('Выбранные', 'Selected');
+  String get appsMacNote => t(
+      'Safari и некоторые системные программы выходят в сеть через службы macOS, поэтому '
+          'правило для них может не сработать.',
+      'Safari and some system apps go online through macOS services, so a rule for them may '
+          'not work.');
+  String get appsProxyNote => t(
+      'В режиме «Системный прокси» правило работает для программ, которые идут через прокси. '
+          'Чтобы оно действовало на все программы, выберите «Весь трафик».',
+      'In "System proxy" mode the rule covers the apps that use the proxy. Choose "All traffic" '
+          'to cover every app.');
+
+  String get quickTile => t('Кнопка в шторке', 'Quick settings button');
+  String get quickTileHint =>
+      t('Включать VPN прямо из шторки уведомлений', 'Turn the VPN on from the notification shade');
+  String get tileAdded => t('Кнопка Tek добавлена в шторку', 'The Tek button is in quick settings now');
+  String get tileAlready => t('Кнопка Tek уже есть в шторке', 'The Tek button is already in quick settings');
+  String get tileManual => t(
+      'Опустите шторку двумя пальцами, нажмите на карандаш и перетащите кнопку Tek к остальным.',
+      'Pull the shade down with two fingers, tap the pencil and drag the Tek button to the others.');
   String get copy => t('Копировать', 'Copy');
   String get copied => t('Скопировано', 'Copied');
   String get emptyLog => t('Журнал пуст', 'The log is empty');

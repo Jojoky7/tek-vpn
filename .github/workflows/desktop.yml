@@ -121,9 +121,13 @@ jobs:
         env:
           CGO_ENABLED: '0'
         run: |
+          # Xray with process lookup for macOS, for apps that go around the
+          # VPN or through it (see core/darwinproc).
+          export GOWORK="$(TMPDIR="$RUNNER_TEMP" _xray/workspace.sh)"
           for arch in arm64 amd64; do
             GOOS=darwin GOARCH=$arch go build -trimpath -ldflags "-s -w -buildid= -X main.version=$VERSION" -o ../dist/core/tek-core-$arch ./cmd/tek-core
           done
+          grep -q -a darwinproc.Search ../dist/core/tek-core-arm64
           lipo -create -output ../dist/core/tek-core ../dist/core/tek-core-arm64 ../dist/core/tek-core-amd64
           lipo -info ../dist/core/tek-core
 

@@ -15,8 +15,9 @@ from PIL import Image, ImageDraw
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 APP = os.path.join(ROOT, "app")
 
-GREEN_TOP = (34, 212, 134)
-GREEN_BOTTOM = (14, 159, 99)
+# Tek blue (#2F80ED), lighter at the top left.
+BLUE_TOP = (84, 160, 255)
+BLUE_BOTTOM = (26, 98, 214)
 WHITE = (255, 255, 255, 255)
 
 # Mark geometry on a 1024 grid: arch from (256, 400) through control
@@ -67,7 +68,7 @@ def gradient(size):
     for y in range(size):
         for x in range(size):
             t = (x + y) / (2 * (size - 1) or 1)
-            px[x, y] = tuple(int(GREEN_TOP[i] + (GREEN_BOTTOM[i] - GREEN_TOP[i]) * t) for i in range(3)) + (255,)
+            px[x, y] = tuple(int(BLUE_TOP[i] + (BLUE_BOTTOM[i] - BLUE_TOP[i]) * t) for i in range(3)) + (255,)
     return img
 
 
@@ -80,7 +81,7 @@ def rounded_mask(size, radius_ratio=0.2266):
 
 
 def app_icon(size, rounded=True, padding=0.0):
-    """Green tile with the white mark. padding shrinks the tile inside the canvas."""
+    """Blue tile with the white mark. padding shrinks the tile inside the canvas."""
     inner = max(1, round(size * (1 - 2 * padding)))
     tile = gradient(inner)
     if rounded:
@@ -125,7 +126,7 @@ def main():
     os.makedirs(os.path.join(res, "values"), exist_ok=True)
     with open(os.path.join(res, "values", "ic_launcher_background.xml"), "w") as f:
         f.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
-                '    <color name="ic_launcher_background">#16BB78</color>\n</resources>\n')
+                '    <color name="ic_launcher_background">#2F80ED</color>\n</resources>\n')
 
     # Windows: app icon and tray icon.
     ico_sizes = [16, 20, 24, 32, 40, 48, 64, 128, 256]

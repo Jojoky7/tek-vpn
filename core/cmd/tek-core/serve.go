@@ -25,6 +25,9 @@ type StartRequest struct {
 	SystemProxy *proxySettings  `json:"systemProxy,omitempty"`
 	Tun         *tunOptions     `json:"tun,omitempty"`
 	AssetDir    string          `json:"assetDir,omitempty"`
+	// AppPID is the app that asked for the connection. The macOS helper
+	// outlives the app, so it disconnects when that process is gone.
+	AppPID int `json:"appPid,omitempty"`
 }
 
 type proxySettings struct {
@@ -53,6 +56,11 @@ type session struct {
 	lastError string
 	tun       *tunState
 	proxy     *proxyState
+	// watchApp: the macOS helper, which outlives the app, disconnects when
+	// the app that connected is gone. gen counts connections, so that the
+	// watcher of an old one does not stop a newer one.
+	watchApp bool
+	gen      uint64
 }
 
 func (s *session) leftoversPath() string {
@@ -187,6 +195,19 @@ func (s *session) start(req StartRequest) error {
 	s.mode = req.Mode
 	s.since = time.Now()
 	s.lastError = ""
+	forgetLocalIPs()
+	s.gen++
+	if s.watchApp && req.AppPID > 0 {
+		gen := s.gen
+		go watchParent(req.AppPID, func() {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			if s.gen == gen && s.mode != "" {
+				tek.Logs.Printf("info", "the app has exited, disconnecting")
+				s.stopLocked()
+			}
+		})
+	}
 	return nil
 }
 
@@ -307,7 +328,7 @@ func writeFileAtomic(path string, data []byte, mode os.FileMode, owner int) erro
 func runAPI(o apiOptions) error {
 	token := o.token
 	recoverLeftovers(o.dataDir)
-	sess := &session{dataDir: o.dataDir}
+	sess := &session{dataDir: o.dataDir, watchApp: o.daemon}
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -349,6 +370,13 @@ func runAPI(o apiOptions) error {
 			return
 		}
 		writeJSON(w, sess.status())
+	})
+	handle("/v1/apps", func(w http.ResponseWriter, r *http.Request) {
+		apps := runningApps()
+		if apps == nil {
+			apps = []appInfo{}
+		}
+		writeJSON(w, apps)
 	})
 	handle("/v1/stop", func(w http.ResponseWriter, r *http.Request) {
 		sess.stop()

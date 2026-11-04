@@ -1,10 +1,13 @@
 package com.tekvpn.app
 
 import android.Manifest
+import android.app.StatusBarManager
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.drawable.Icon
 import android.net.VpnService
 import android.os.Build
 import android.os.Handler
@@ -17,6 +20,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** The screen. Talks to the Dart side over "tek/core" and "tek/core/status". */
 class MainActivity : FlutterActivity() {
@@ -73,6 +77,7 @@ class MainActivity : FlutterActivity() {
             "validate" -> background(result) { Tekcore.validate(call.argument<String>("config") ?: "{}") }
             "version" -> result.success(Tekcore.version())
             "apps" -> background(result) { launcherApps() }
+            "requestTile" -> requestTile(result)
             else -> result.notImplemented()
         }
     }
@@ -123,6 +128,40 @@ class MainActivity : FlutterActivity() {
             result.success(null)
         } else {
             result.error("permission_denied", "the user did not allow the VPN", null)
+        }
+    }
+
+    /** Android 13+: the system asks the person to add the Tek button to the quick settings. */
+    private fun requestTile(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < 33) {
+            result.success("unsupported")
+            return
+        }
+        val bar = getSystemService(StatusBarManager::class.java)
+        if (bar == null) {
+            result.success("unsupported")
+            return
+        }
+        val answered = AtomicBoolean(false)
+        try {
+            bar.requestAddTileService(
+                ComponentName(this, TekTileService::class.java),
+                "Tek",
+                Icon.createWithResource(this, R.drawable.ic_stat_tek),
+                mainExecutor,
+            ) { code ->
+                if (!answered.compareAndSet(false, true)) return@requestAddTileService
+                result.success(
+                    when (code) {
+                        StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED -> "added"
+                        StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED -> "already"
+                        StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_NOT_ADDED -> "declined"
+                        else -> "error"
+                    },
+                )
+            }
+        } catch (e: Throwable) {
+            if (answered.compareAndSet(false, true)) result.success("error")
         }
     }
 
