@@ -18,12 +18,10 @@ import 'package:tek/src/model/subscription.dart';
 import 'package:tek/src/parse/subscription_parser.dart';
 import 'package:tek/src/services/storage.dart';
 import 'package:tek/src/services/subscription_service.dart';
-import 'package:tek/src/services/tek_api.dart';
 import 'package:tek/src/state/app_state.dart';
 import 'package:tek/src/ui/add_subscription_screen.dart';
 import 'package:tek/src/ui/apps_screen.dart';
 import 'package:tek/src/ui/developer_screen.dart';
-import 'package:tek/src/ui/login_screen.dart';
 import 'package:tek/src/ui/ru_sites_screen.dart';
 import 'package:tek/src/ui/settings_screen.dart';
 import 'package:tek/src/ui/strings.dart';
@@ -186,7 +184,6 @@ Future<AppState> _app({required bool withSubscription, required bool android}) a
     engine: FakeEngine(),
     storage: storage,
     subscriptions: SubscriptionService('1.0.0'),
-    api: TekApi(),
     isAndroid: android,
   );
   await app.init();
@@ -236,9 +233,6 @@ void main() {
       await _settle(tester);
       await _save(tester, 'phone-$theme-2-add-subscription');
 
-      await tester.pumpWidget(_wrap(empty, screen: const LoginScreen()));
-      await _settle(tester);
-      await _save(tester, 'phone-$theme-3-login');
       empty.dispose();
 
       final app = await _app(withSubscription: true, android: true);
@@ -297,6 +291,39 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
   }
+
+  testWidgets('adding a subscription offers the link and no sign-in or registration',
+      (tester) async {
+    final app = await _app(withSubscription: false, android: true);
+    await tester.pumpWidget(_wrap(app, screen: const AddSubscriptionScreen()));
+    await _settle(tester);
+    // One field, for the link. No email, no password, no account button.
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byIcon(Icons.alternate_email_rounded), findsNothing);
+    expect(find.textContaining('почт'), findsNothing);
+    expect(find.textContaining('Войти'), findsNothing);
+    expect(find.textContaining('Регистр'), findsNothing);
+    await tester.pumpWidget(Container());
+    app.dispose();
+  });
+
+  test('the session an older version kept for the account is dropped at start', () async {
+    SharedPreferences.setMockInitialValues({
+      'account': '{"email":"someone@gmail.com","token":"old-session"}',
+    });
+    final storage = await Storage.open();
+    final app = AppState(
+      engine: FakeEngine(),
+      storage: storage,
+      subscriptions: SubscriptionService('1.0.0'),
+      isAndroid: true,
+    );
+    await app.init();
+    await Future<void>.delayed(Duration.zero);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.containsKey('account'), isFalse);
+    app.dispose();
+  });
 
   testWidgets('computer window', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;

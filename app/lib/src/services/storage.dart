@@ -108,18 +108,7 @@ class Storage {
   Future<void> setChecks(Map<String, CheckResult> checks) => _prefs.setString(
       _kChecks, jsonEncode({for (final e in checks.entries) e.key: e.value.toJson()}));
 
-  /// The tekvpn.com session: {"email": ..., "token": ...}.
-  Map<String, String>? get account {
-    final raw = _prefs.getString(_kAccount);
-    if (raw == null) return null;
-    try {
-      return Map<String, String>.from(jsonDecode(raw) as Map);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> setAccount(Map<String, String>? a) => a == null
-      ? _prefs.remove(_kAccount)
-      : _prefs.setString(_kAccount, jsonEncode(a));
+  /// Versions before 1.2 signed in to tekvpn.com with an email and kept the
+  /// session here. Tek no longer signs in, so the old token is dropped.
+  Future<void> forgetAccount() => _prefs.remove(_kAccount);
 }

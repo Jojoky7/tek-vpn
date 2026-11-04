@@ -98,15 +98,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
                             builder: (_) => const AddSubscriptionScreen())),
                       ),
-                    if (app.accountEmail != null) ...[
-                      const Divider(indent: 16, endIndent: 16),
-                      ListTile(
-                        leading: const Icon(Icons.person_outline_rounded),
-                        title: Text(app.accountEmail!),
-                        subtitle: Text(s.account),
-                        trailing: TextButton(onPressed: app.signOut, child: Text(s.signOut)),
-                      ),
-                    ],
                   ]),
                 ),
                 SectionTitle(s.connection),

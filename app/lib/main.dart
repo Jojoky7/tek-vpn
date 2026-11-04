@@ -13,7 +13,6 @@ import 'src/core/engine.dart';
 import 'src/desktop.dart';
 import 'src/services/storage.dart';
 import 'src/services/subscription_service.dart';
-import 'src/services/tek_api.dart';
 import 'src/state/app_state.dart';
 import 'src/ui/app_scope.dart';
 import 'src/ui/home_screen.dart';
@@ -56,7 +55,6 @@ Future<void> main(List<String> args) async {
     engine: engine,
     storage: storage,
     subscriptions: SubscriptionService(info.version),
-    api: TekApi(),
     isAndroid: Platform.isAndroid,
   );
   state = app;

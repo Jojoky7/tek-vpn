@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_scope.dart';
-import 'login_screen.dart';
 import 'qr_screen.dart';
 import 'strings.dart';
 
@@ -103,32 +102,23 @@ class _AddSubscriptionScreenState extends State<AddSubscriptionScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                       : Text(s.add),
                 ),
-                const SizedBox(height: 24),
-                Row(children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(s.or, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                  ),
-                  const Expanded(child: Divider()),
-                ]),
-                const SizedBox(height: 24),
                 if (canScan) ...[
+                  const SizedBox(height: 24),
+                  Row(children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(s.or, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                    ),
+                    const Expanded(child: Divider()),
+                  ]),
+                  const SizedBox(height: 24),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.qr_code_scanner_rounded),
                     label: Text(s.scanQr),
                     onPressed: busy ? null : _scan,
                   ),
-                  const SizedBox(height: 12),
                 ],
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.alternate_email_rounded),
-                  label: Text(s.signInWithEmail),
-                  onPressed: busy
-                      ? null
-                      : () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(builder: (_) => const LoginScreen())),
-                ),
               ],
             ),
           ),

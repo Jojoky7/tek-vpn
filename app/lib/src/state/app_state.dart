@@ -11,7 +11,6 @@ import '../services/desktop_apps.dart';
 import '../services/settings.dart';
 import '../services/storage.dart';
 import '../services/subscription_service.dart';
-import '../services/tek_api.dart';
 import '../xray/config_builder.dart';
 import '../xray/ru_sites.dart';
 
@@ -31,14 +30,12 @@ class AppState extends ChangeNotifier {
     required this.engine,
     required this.storage,
     required this.subscriptions,
-    required this.api,
     required this.isAndroid,
   });
 
   final TekEngine engine;
   final Storage storage;
   final SubscriptionService subscriptions;
-  final TekApi api;
   final bool isAndroid;
 
   Subscription? subscription;
@@ -64,9 +61,6 @@ class AppState extends ChangeNotifier {
   int speedUp = 0;
 
   AppError? error;
-
-  /// The tekvpn.com account, if the user signed in.
-  String? accountEmail;
 
   ApiProxy? _api;
   StreamSubscription<EngineStatus>? _statusSub;
@@ -128,7 +122,8 @@ class AppState extends ChangeNotifier {
     settings = storage.settings;
     selectedId = storage.selectedServer;
     checks.addAll(storage.checks);
-    accountEmail = storage.account?['email'];
+    // Versions before 1.2 signed in with an email and kept the session; Tek no longer does.
+    unawaited(storage.forgetAccount());
     await engine.setLogLevel(settings.verboseLog ? 'debug' : 'warning').catchError((_) {});
 
     _statusSub = engine.status.listen(_onStatus);
@@ -283,64 +278,6 @@ class AppState extends ChangeNotifier {
   void _dropOldChecks() {
     final ids = {for (final s in servers) s.id};
     checks.removeWhere((id, _) => !ids.contains(id));
-  }
-
-  // --- account -----------------------------------------------------------
-
-  /// Signs in to tekvpn.com (or creates the account) and adds its
-  /// subscription.
-  Future<bool> signIn(String email, String password, {required bool register}) async {
-    error = null;
-    if (register && !TekApi.isGmail(email)) {
-      error = const AppError('gmailOnly');
-      notifyListeners();
-      return false;
-    }
-    if (password.length < 8) {
-      error = const AppError('shortPassword');
-      notifyListeners();
-      return false;
-    }
-    refreshing = true;
-    notifyListeners();
-    try {
-      final token = register
-          ? await api.register(email, password, via: _api)
-          : await api.login(email, password, via: _api);
-      await storage.setAccount({'email': email.trim(), 'token': token});
-      accountEmail = email.trim();
-      var keys = await api.keys(token, via: _api);
-      if (keys.isEmpty && register) {
-        // The site gives new accounts a trial the same way.
-        try {
-          await api.trial(token, via: _api);
-          keys = await api.keys(token, via: _api);
-        } on TekApiException catch (_) {}
-      }
-      if (keys.isEmpty) {
-        error = const AppError('noKeys');
-        return false;
-      }
-      final key = keys.firstWhere((k) => k.active, orElse: () => keys.first);
-      refreshing = false;
-      return await addSubscription(key.subscriptionUrl);
-    } on TekApiException catch (e) {
-      error = switch (e.code) {
-        'email_taken' => const AppError('emailTaken'),
-        'network' => AppError('sub_network', e.message),
-        _ => AppError('signInFailed', e.message),
-      };
-      return false;
-    } finally {
-      refreshing = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> signOut() async {
-    await storage.setAccount(null);
-    accountEmail = null;
-    notifyListeners();
   }
 
   // --- servers ---------------------------------------------------------

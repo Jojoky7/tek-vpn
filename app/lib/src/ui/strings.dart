@@ -45,21 +45,13 @@ class S {
   String get subscriptionLink => t('Ссылка на подписку', 'Subscription link');
   String get paste => t('Вставить', 'Paste');
   String get scanQr => t('Сканировать QR-код', 'Scan QR code');
-  String get signInWithEmail => t('Войти по почте', 'Sign in with email');
   String get or => t('или', 'or');
   String get add => t('Добавить', 'Add');
   String get addHint => t(
-      'Вставьте ссылку из личного кабинета или бота, отсканируйте QR-код или войдите по почте.',
-      'Paste the link from your account or the bot, scan the QR code or sign in with email.');
-
-  String get email => t('Почта', 'Email');
-  String get password => t('Пароль', 'Password');
-  String get signIn => t('Войти', 'Sign in');
-  String get register => t('Зарегистрироваться', 'Create account');
-  String get haveAccount => t('Уже есть аккаунт? Войти', 'Have an account? Sign in');
-  String get noAccount => t('Нет аккаунта? Регистрация', 'No account? Create one');
-  String get account => t('Аккаунт', 'Account');
-  String get signOut => t('Выйти из аккаунта', 'Sign out');
+      'Вставьте ссылку подписки из личного кабинета на tekvpn.com или из бота. На телефоне можно '
+          'отсканировать QR-код.',
+      'Paste the subscription link from your tekvpn.com account or the bot. On a phone you can '
+          'scan the QR code instead.');
 
   String trafficLeft(String left, String total) =>
       t('Осталось $left из $total', '$left of $total left');
@@ -229,11 +221,6 @@ class S {
             '"All traffic" needs administrator rights. You can switch to "System proxy" in the settings.'),
         'connectFailed' => t('Не удалось подключиться', 'Could not connect'),
         'connectionLost' => t('Соединение прервалось', 'The connection dropped'),
-        'gmailOnly' => t('Регистрация только с адресом @gmail.com', 'Only @gmail.com addresses can register'),
-        'shortPassword' => t('Пароль должен быть не короче 8 символов', 'The password needs at least 8 characters'),
-        'emailTaken' => t('Эта почта уже зарегистрирована. Войдите.', 'This email is already registered. Sign in.'),
-        'signInFailed' => t('Неверная почта или пароль', 'Wrong email or password'),
-        'noKeys' => t('В аккаунте пока нет подписки', 'The account has no subscription yet'),
         'serverTrouble' => t('Сервер не отвечает. Выберите другую страну.', 'The server does not answer. Pick another location.'),
         _ => t('Что-то пошло не так', 'Something went wrong'),
       };
