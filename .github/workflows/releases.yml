@@ -1,0 +1,59 @@
+# Publishes the built files from the releases branch as GitHub releases:
+# one release per version folder there, tagged v<version> at the commit the
+# version was built from (versions.txt on that branch), with the notes from
+# notes/<version>.md. A person starts it: Actions → Releases → Run workflow.
+# Running it again brings the notes and files of existing releases up to
+# date. Tags made with the workflow's own token do not start Desktop builds.
+name: Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to publish, such as 1.1.0, or all
+        required: true
+        default: all
+
+permissions:
+  contents: write
+
+concurrency: releases
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: releases
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          WANT: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          latest=$(grep -v '^#' versions.txt | cut -d' ' -f1 | sort -V | tail -1)
+          found=0
+          while read -r v sha; do
+            case "$v" in '' | '#'*) continue ;; esac
+            [ "$WANT" = all ] || [ "$WANT" = "$v" ] || continue
+            found=1
+            files=("$v"/*)
+            if [ "$v" = "$latest" ]; then flag=--latest; else flag=--latest=false; fi
+            if gh release view "v$v" >/dev/null 2>&1; then
+              echo "v$v is published already: bringing its notes and files up to date"
+              gh release edit "v$v" --title "Tek $v" --notes-file "notes/$v.md" "$flag"
+              gh release upload "v$v" "${files[@]}" --clobber
+            else
+              gh release create "v$v" "${files[@]}" --target "$sha" --title "Tek $v" \
+                --notes-file "notes/$v.md" "$flag"
+            fi
+          done < versions.txt
+          if [ "$found" = 0 ]; then
+            echo "There is no version $WANT in versions.txt on the releases branch"
+            exit 1
+          fi
+          gh release list --limit 20
