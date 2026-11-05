@@ -88,6 +88,11 @@ void main() {
     expect(vpn, lessThan(mine));
     expect(rules[mine]['outboundTag'], 'direct');
     expect(mine, lessThan(ru));
+    // Tek's own site is on a Russian IP and still goes through the VPN.
+    final own = at((r) => (r['domain'] as List?)?.contains('domain:tekvpn.com') == true);
+    expect(rules[own]['outboundTag'], 'proxy');
+    expect(own, lessThan(ru));
+    expect(own, lessThan(at((r) => (r['ip'] as List?)?.contains('geoip:ru') == true)));
     expect(rules.last['outboundTag'], 'proxy');
     expect(rules.last.containsKey('process'), isFalse);
 
