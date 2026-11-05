@@ -97,6 +97,9 @@ class XrayConfigBuilder {
     'https://8.8.8.8/dns-query',
   ];
 
+  /// Tek's own site and subscriptions.
+  static const ownDomains = ['domain:tekvpn.com'];
+
   static const _ruFallbackDomains = [
     'domain:ru',
     'domain:su',
@@ -236,6 +239,11 @@ class XrayConfigBuilder {
       if (o.proxyDomains.isNotEmpty)
         forApps({'domain': o.proxyDomains, 'outboundTag': proxyTag}),
       if (o.directDomains.isNotEmpty) {'domain': o.directDomains, 'outboundTag': 'direct'},
+      if (o.ruDirect)
+        // Tek's own site sits on a Russian IP, so the Russian rules below
+        // would send it around the tunnel. It goes through the VPN like
+        // with Happ, so it opens on networks where direct traffic fails.
+        forApps({'domain': ownDomains, 'outboundTag': proxyTag}),
       if (o.ruDirect) {'domain': ruDomains, 'outboundTag': 'direct'},
       if (o.ruDirect && o.geoFiles) {'ip': ['geoip:ru'], 'outboundTag': 'direct'},
       if (o.blockQuic)
