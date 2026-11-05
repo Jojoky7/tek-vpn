@@ -3,13 +3,13 @@
 VPN-приложение TekVPN для Android, Windows и macOS. Подключается по ссылке
 подписки tekvpn.com. Внутри Xray 26.3.27.
 
-## Скачать Tek 1.2.0
+## Скачать Tek 1.2.1
 
 | Система | Файл |
 | --- | --- |
-| Android | [Tek-1.2.0-android.apk](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.0/Tek-1.2.0-android.apk) |
-| Windows | [установщик](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.0/Tek-1.2.0-windows-x64-setup.exe) или [без установки, zip](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.0/Tek-1.2.0-windows-x64-portable.zip) |
-| macOS | [Tek-1.2.0-macos.dmg](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.0/Tek-1.2.0-macos.dmg) |
+| Android | [Tek-1.2.1-android.apk](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.1/Tek-1.2.1-android.apk) |
+| Windows | [установщик](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.1/Tek-1.2.1-windows-x64-setup.exe) или [без установки, zip](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.1/Tek-1.2.1-windows-x64-portable.zip) |
+| macOS | [Tek-1.2.1-macos.dmg](https://github.com/Jojoky7/tek-vpn/raw/releases/1.2.1/Tek-1.2.1-macos.dmg) |
 
 Все версии, как установить и что в них менялось: ветка
 [releases](https://github.com/Jojoky7/tek-vpn/tree/releases).
