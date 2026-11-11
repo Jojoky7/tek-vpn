@@ -167,6 +167,10 @@ func setupTun(name string, up uplink, servers []netip.Addr, opts tunOptions) (*t
 		}
 	}
 
+	// Direct connections get their host routes one by one, like the
+	// servers' (see bypass_darwin.go).
+	bypass.arm(up, servers)
+
 	nets := []string{"0.0.0.0/1", "128.0.0.0/1"}
 	for _, n := range nets {
 		if _, err := run("/sbin/route", "-q", "-n", "add", "-net", n, "-interface", name); err != nil {
@@ -209,6 +213,7 @@ func teardownTun(st *tunState) {
 		_, _ = run("/usr/sbin/networksetup", args...)
 		flushDNSCache()
 	}
+	bypass.disarm()
 	for _, ip := range st.HostRoutes {
 		_, _ = run("/sbin/route", "-q", "-n", "delete", "-host", ip, st.Gateway)
 	}
