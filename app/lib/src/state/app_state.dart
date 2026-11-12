@@ -47,6 +47,10 @@ class AppState extends ChangeNotifier {
   final Map<String, CheckResult> checks = {};
   final Set<String> checking = {};
   bool checkingAll = false;
+
+  /// The last check of all servers found none working: no internet, or the
+  /// provider lets only whitelisted sites through.
+  bool allDown = false;
   bool refreshing = false;
 
   ConnState conn = ConnState.disconnected;
@@ -112,7 +116,7 @@ class AppState extends ChangeNotifier {
 
   int _delay(ServerNode s) {
     final c = checks[s.id];
-    return c?.tcpMs ?? c?.realMs ?? 99999;
+    return c?.realMs ?? c?.tcpMs ?? 99999;
   }
 
   // --- start -------------------------------------------------------------
@@ -343,12 +347,10 @@ class AppState extends ChangeNotifier {
     try {
       final tcp = await engine.tcpPing([for (final s in list) (host: s.host, port: s.port)]);
       for (var i = 0; i < list.length && i < tcp.length; i++) {
-        final old = checks[list[i].id];
+        // A new check forgets the old answer, so a server that worked an
+        // hour ago does not stay green while the internet is gone.
         checks[list[i].id] = CheckResult(
-          alive: old?.alive,
           tcpMs: tcp[i].ok ? tcp[i].ms : null,
-          realMs: old?.realMs,
-          at: old?.at,
         );
       }
       notifyListeners();
@@ -367,6 +369,7 @@ class AppState extends ChangeNotifier {
         checking.remove(s.id);
         notifyListeners();
       }
+      allDown = list.every((s) => checks[s.id]?.alive == false);
       await storage.setChecks(checks);
     } catch (e) {
       debugPrint('check failed: $e');

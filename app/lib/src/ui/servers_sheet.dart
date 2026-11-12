@@ -54,6 +54,11 @@ class _ServersSheet extends StatelessWidget {
             ),
           ]),
         ),
+        if (app.allDown && !app.checkingAll)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Text(s.allDown, style: const TextStyle(color: TekColors.amber, fontSize: 13)),
+          ),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),

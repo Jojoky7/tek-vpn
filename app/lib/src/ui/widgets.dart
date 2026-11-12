@@ -9,12 +9,15 @@ import '../state/app_state.dart';
 import 'strings.dart';
 import 'theme.dart';
 
-/// The number next to a server: the TCP time, or a dash when the server
-/// does not work through the VPN.
+/// The number next to a server: the time of a real request through it, or a
+/// dash when the server does not work through the VPN. Nothing is shown
+/// until the real check has passed: when the provider lets only whitelisted
+/// sites through, a plain TCP connection still opens in a few milliseconds
+/// (the provider answers it itself), so the TCP time says nothing about
+/// whether the server works.
 String pingText(CheckResult? check) {
-  if (check == null) return '';
-  if (check.alive == false) return '—';
-  final ms = check.tcpMs ?? check.realMs;
+  if (check == null || check.alive != true) return check?.alive == false ? '—' : '';
+  final ms = check.realMs ?? check.tcpMs;
   return ms == null ? '' : S.current.ms(ms);
 }
 

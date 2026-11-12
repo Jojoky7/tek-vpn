@@ -35,6 +35,9 @@ class S {
   String get disconnecting => t('Отключение…', 'Disconnecting…');
   String get fastest => t('Самый быстрый', 'Fastest');
   String get fastestHint => t('Tek выберет сервер сам', 'Tek picks the server');
+  String get allDown => t(
+      'Ни один сервер не отвечает. Проверьте интернет. Если открываются только российские сайты, у оператора включены белые списки.',
+      'No server answers. Check the internet. If only Russian sites open, the provider has turned on a whitelist.');
   String get servers => t('Страны', 'Locations');
   String get changeServer => t('Сменить страну', 'Change location');
   String get check => t('Проверить', 'Check');
